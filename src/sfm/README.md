@@ -297,6 +297,24 @@ package version. A usage error names the flag, says what was wrong with it and
 points at `--help`; it always exits 1, because `auto` spends exit codes 2 and 3
 on *the reconstruction* being absent or partial.
 
+A manifest camera can provide complete calibrated intrinsics in `params`, using
+the named model's COLMAP parameter order and the original image's pixel units:
+
+```yaml
+cameras:
+  - prefix: cam0
+    model: opencv-fisheye
+    params: [900, 910, 1200, 1190, 0.1, -0.02, 0.003, -0.0004]
+```
+
+For `opencv-fisheye` the order is `fx, fy, cx, cy, k1, k2, k3, k4`.
+`params` requires an explicit model and cannot share an entry with `focal` or
+`distortion`. It initializes matching and mapping without recentering or making
+the focal lengths equal; feature extraction downscaling does not change its
+pixel units. Existing CLI camera overrides retain precedence. Bundle adjustment
+still refines focal lengths; `--no-refine-extra-params --no-final-extra-params`
+holds distortion and the principal point at their supplied values.
+
 Every line a default run prints is **localized**, in the language `--lang`,
 `SS_LANG` or the OS says, and carries a translated stage tag padded to a common
 width: `[extract] 12/512   frame_0012.png   Features: 4096`. The mechanism is
