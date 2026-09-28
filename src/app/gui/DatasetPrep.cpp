@@ -1,6 +1,7 @@
 // DatasetPrep.cpp -- see DatasetPrep.h.
 
 #include "app/gui/DatasetPrep.h"
+#include "app/gui/ArcturusImport.h"
 
 #include "app/gui/DatasetRecord.h"
 #include "app/gui/mask/MaskLayer.h"
@@ -1480,6 +1481,9 @@ static bool lockstep_extraction(const PrepJob& job, const PrepInput& in, bool bu
 bool DatasetPrep::extract_video(const PrepJob& job, const PrepInput& in,
                                 const std::string& images, PrepResult& out,
                                 std::string& error) {
+    if (extract_arcturus(job, in, images, out, _cancel,
+                         [this](const std::string& line) { log(line, false); }, _prog))
+        return true;
     // Resume: frames are moved into place in one batch after selection, so a
     // non-empty folder means a previous extraction of THIS input finished.
     if (job.redo_frames) clear_generated(images, job.workspace);

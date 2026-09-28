@@ -1430,6 +1430,10 @@ void TrainerSession::save_checkpoint(int step) {
     fs::path ckpt = out_dir / name;
     fs::create_directories(ckpt);
     engine_save_checkpoint(ckpt.string(), cfg.save_full_checkpoint, step);
+    const fs::path xr = fs::path(cfg.data) / "scene.xrSceneTransform.json";
+    if (ds.center_mode == "none" && cfg.relative_scale.value_or(1.0f) == 1.0f && fs::exists(xr))
+        fs::copy_file(xr, ckpt / "splat.xrSceneTransform.json",
+                      fs::copy_options::overwrite_existing);
     if (cfg.save_only_latest_checkpoint) {
         std::vector<fs::path> stale;
         for (const auto& e : fs::directory_iterator(out_dir)) {

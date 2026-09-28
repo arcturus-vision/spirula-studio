@@ -125,6 +125,11 @@ std::vector<LensCalibration> djmd_lenses(const uint8_t* sample, size_t n);
 // From the first djmd sample that holds a calibration; empty when none does.
 std::vector<LensCalibration> video_lenses(const std::string& path);
 std::vector<LensCalibration> video_lenses(const uint8_t* data, size_t size);
+// Visits raw metadata samples without decoding video or buffering the recording.
+bool video_metadata_packets(const std::string &path, const std::string &sample_type,
+                            const std::function<bool(const std::vector<uint8_t> &)> &visit,
+                            std::string &error);
+std::vector<double> video_display_rotations(const std::string &path);
 
 // Whether the readings look like a working sensor, not whether they are
 // precise: units, coverage of the video, sample-rate regularity, a gravity

@@ -1,6 +1,7 @@
 // SfmRunner.cpp -- see SfmRunner.h.
 
 #include "app/gui/SfmRunner.h"
+#include "app/gui/ArcturusImport.h"
 
 #include "app/gui/SfmInProcess.h"
 
@@ -415,6 +416,13 @@ void SfmRunner::apply_status(const RunStatus& st) {
 // The panel's per-input rows become the manifest's camera groups, keyed on the
 // sub-folder each input's frames went into. The focal is a fraction of the
 // width up to here: the width is not known until the frames exist.
+static bool has_arcturus_manifest(const std::string &images) {
+    for (const auto &entry : fs::recursive_directory_iterator(images))
+        if (entry.path().filename() == ".arcturus-manifest.json")
+            return true;
+    return false;
+}
+
 sfm::Manifest SfmRunner::build_manifest(const SfmJob& job, const PrepResult& prep) {
     sfm::Manifest man;
     man.image_dir = prep.image_dir;
@@ -466,6 +474,19 @@ sfm::Manifest SfmRunner::build_manifest(const SfmJob& job, const PrepResult& pre
     }
     man.rigs = build_rigs(job.prep, &prep);
     man.sequences = build_sequences(job);
+    for (const auto &entry : fs::recursive_directory_iterator(prep.image_dir)) {
+        if (entry.path().filename() != ".arcturus-manifest.json")
+            continue;
+        const auto calibrated = sfm::manifest_read(entry.path().string());
+        for (const auto &camera : calibrated.cameras) {
+            man.cameras.erase(
+                std::remove_if(man.cameras.begin(), man.cameras.end(),
+                               [&](const auto &c) { return c.prefix == camera.prefix; }),
+                man.cameras.end());
+            man.cameras.push_back(camera);
+        }
+        man.rigs.clear();
+    }
     return man;
 }
 
@@ -756,6 +777,11 @@ std::vector<std::string> SfmRunner::recon_args(const SfmJob& job,
     }
     for (const std::string& a : split_args(job.extra_args))
         argv.push_back(a);
+    if (has_arcturus_manifest(prep.image_dir)) {
+        argv.insert(argv.end(),
+                    {"--no-refine-extra-params", "--no-final-extra-params", "--exif-orientation",
+                     "none", "--no-orient", "--ba-real", "cpu", "--ba-real-coarse", "cpu"});
+    }
     return argv;
 }
 
@@ -854,8 +880,13 @@ void SfmRunner::run(SfmJob job) {
         take_reconstruction(job);
         plan = plan_dataset(plan_job(job), prior, rec, req, &plan, Step::Model);
         say(Step::Model);
-        const bool reuse_model = !makes(plan[Step::Model].act);
+        const bool arcturus = has_arcturus_manifest(prep.image_dir);
+        const auto aligned_marker = ws / ".arcturus-aligned";
+        const bool reuse_model = !makes(plan[Step::Model].act) &&
+            (!arcturus || (fs::exists(aligned_marker) &&
+                           fs::exists(ws / "scene.xrSceneTransform.json")));
         if (!reuse_model) {
+            if (arcturus) fs::remove(aligned_marker);
             const std::vector<std::string> now = recon_args(job, prep);
             record.begin(Step::Model, model_fields(job));
             set_stage(Stage::Features, lmsg::stage_reconstructing_features.get());
@@ -960,7 +991,11 @@ void SfmRunner::run(SfmJob job) {
         // transforms.json or a Metashape export, which has no sparse/ at all.
         if (!reuse_model && !has_model(ws / "sparse"))
             return fail(lmsg::err_no_reconstruction.get());
-        if (!reuse_model) record.finish(Step::Model);
+        if (!reuse_model) {
+            align_arcturus_dataset(ws.string(), prep.image_dir);
+            if (fs::exists(ws / "alignment.json")) _not_metric = false;
+            record.finish(Step::Model);
+        }
 
         // ---- 3. depth and normals -------------------------------------------
         take_geometry(job);
