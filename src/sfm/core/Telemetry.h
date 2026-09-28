@@ -96,6 +96,12 @@ bool telemetry_read(uint64_t size, const TelemetryRead& read, Telemetry& out, st
 // container's own boxes carry it. Empty when the file names none.
 VideoProjection video_projection(const std::string& path);
 
+// Visits raw metadata samples without decoding video or buffering the recording.
+bool video_metadata_packets(const std::string &path, const std::string &sample_type,
+                            const std::function<bool(const std::vector<uint8_t> &)> &visit,
+                            std::string &error);
+std::vector<double> video_display_rotations(const std::string &path);
+
 // Whether the readings look like a working sensor, not whether they are
 // precise: units, coverage of the video, sample-rate regularity, a gravity
 // norm, a GPS that moves rather than repeating one stale fix.

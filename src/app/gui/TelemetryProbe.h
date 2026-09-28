@@ -21,6 +21,7 @@ namespace gui {
 struct TelemetryInfo {
     bool done = false;      // false while the read is still queued or running
     bool video = false;
+    bool arcturus = false;
     // A video's streams, and the carrier they came in ("" when none did).
     bool gyro = false, accel = false, attitude = false, gps = false;
     std::string carrier;

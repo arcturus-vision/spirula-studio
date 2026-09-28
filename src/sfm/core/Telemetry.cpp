@@ -179,6 +179,7 @@ struct Track {
     uint32_t timescale = 0;
     uint64_t duration = 0;
     int width = 0, height = 0;
+    double rotation = 0;
     std::vector<Sample> samples;
     double fps() const {
         return (samples.size() > 1 && duration > 0 && timescale > 0)
@@ -201,6 +202,11 @@ bool parse_trak(const uint8_t* data, size_t size, Track& tk) {
     Box mdia, minf, stbl, b;
     if (!find_box(data, size, fourcc("mdia"), mdia)) return false;
     if (find_box(data, size, fourcc("tkhd"), b) && b.payload_size >= 84) {
+        const size_t matrix = b.payload[0] == 1 ? 52 : 40;
+        if (b.payload_size >= matrix + 36)
+            tk.rotation = -std::atan2((double)(int32_t)be32(b.payload + matrix + 4),
+                                      (double)(int32_t)be32(b.payload + matrix)) *
+                          180.0 / 3.141592653589793;
         const size_t o = b.payload[0] == 1 ? 96 : 84;
         if (b.payload_size >= o + 8) {
             tk.width = (int)(be32(b.payload + o - 8) >> 16);
@@ -1323,6 +1329,50 @@ bool telemetry_read(const std::string& path, Telemetry& out, std::string& error)
     FileSource src;
     if (!src.open(path)) { error = "cannot open '" + path + "'"; return false; }
     return read_any(src, out, error);
+}
+
+bool video_metadata_packets(const std::string &path, const std::string &sample_type,
+                            const std::function<bool(const std::vector<uint8_t> &)> &visit,
+                            std::string &error) {
+    FileSource src;
+    if (!src.open(path)) {
+        error = "cannot open '" + path + "'";
+        return false;
+    }
+    Movie mv;
+    bool is_mp4 = false;
+    if (!read_movie(src, mv, is_mp4, error))
+        return false;
+    std::vector<uint8_t> bytes;
+    for (const Track &track : mv.tracks) {
+        if (fourcc_str(track.sample_type) != sample_type)
+            continue;
+        for (const Sample &sample : track.samples) {
+            if (sample.size > 16 * 1024 * 1024 || !src.readVec(sample.offset, sample.size, bytes)) {
+                error = "invalid metadata sample";
+                return false;
+            }
+            if (!visit(bytes))
+                return true;
+        }
+    }
+    return true;
+}
+
+std::vector<double> video_display_rotations(const std::string &path) {
+    FileSource src;
+    if (!src.open(path))
+        return {};
+    Movie mv;
+    bool is_mp4 = false;
+    std::string error;
+    if (!read_movie(src, mv, is_mp4, error))
+        return {};
+    std::vector<double> rotations;
+    for (const Track &track : mv.tracks)
+        if (track.handler == fourcc("vide"))
+            rotations.push_back(track.rotation);
+    return rotations;
 }
 
 VideoProjection video_projection(const std::string& path) {

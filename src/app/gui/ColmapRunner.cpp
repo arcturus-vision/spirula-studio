@@ -1,3 +1,7 @@
+#include "i18n/catalog/Arcturus.h"
+#ifdef SS_TOOL_SFM
+#include "sfm/core/ArcturusCapture.h"
+#endif
 // ColmapRunner.cpp -- see ColmapRunner.h. CLI flags mirror
 // reference/scripts/run_colmap.bash (COLMAP >= 4.x; use_gpu-style flags are
 // gone).
@@ -501,6 +505,15 @@ void ColmapRunner::run(ColmapJob job) {
         if (reuse_model)
             log(spirula::i18n::format(lmsg::sfm_reusing_model, {ws.string()}));
 
+#ifdef SS_TOOL_SFM
+        for (const auto &input : job.inputs) {
+            if (!input.is_video)
+                continue;
+            sfm::ArcturusCapture capture;
+            if (sfm::read_arcturus_capture(input.path, capture))
+                return fail(spirula::i18n::msg::arcturus::require_builtin.get());
+        }
+#endif
         std::string err;
         if (!reuse_model && !check_colmap_version(job, err)) return fail(err);
 

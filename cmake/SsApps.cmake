@@ -466,6 +466,7 @@ if(SS_BUILD_GUI)
     add_executable(dataset_prep_test
         ${SS_SRC}/app/gui/tests/dataset_prep_test.cpp
         ${SS_SRC}/app/gui/DatasetPrep.cpp
+        ${SS_SRC}/app/gui/ArcturusImport.cpp
         ${SS_SRC}/app/gui/FrameSelect.cpp
         ${SS_SRC}/app/FrameSharpness.cpp
         ${SS_SRC}/app/FfmpegVideo.cpp
@@ -479,4 +480,15 @@ if(SS_BUILD_GUI)
         ${SS_SRC}/app/FrameMotion.cpp
         ${SS_SRC}/app/Pano360.cpp)
     ss_configure_app(dataset_prep_test)
+endif()
+
+if(SS_BUILD_SFM AND SS_BUILD_GUI)
+    add_executable(arcturus_import_test
+        ${SS_SRC}/app/gui/tests/arcturus_import_test.cpp
+        ${SS_SRC}/app/gui/ArcturusImport.cpp
+        ${SS_SRC}/app/gui/Subprocess.cpp
+        ${SS_SRC}/app/gui/PrepProgress.cpp)
+    ss_configure_app(arcturus_import_test)
+    target_compile_definitions(arcturus_import_test PRIVATE SS_TOOL_SFM=1)
+    target_link_libraries(arcturus_import_test PRIVATE ss_sfm)
 endif()

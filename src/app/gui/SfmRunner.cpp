@@ -1,6 +1,7 @@
 // SfmRunner.cpp -- see SfmRunner.h.
 
 #include "app/gui/SfmRunner.h"
+#include "app/gui/ArcturusImport.h"
 
 #include "app/gui/SfmInProcess.h"
 
@@ -440,6 +441,13 @@ void SfmRunner::apply_status(const RunStatus& st) {
 // The panel's per-input rows become the manifest's camera groups, keyed on the
 // sub-folder each input's frames went into. The focal is a fraction of the
 // width up to here: the width is not known until the frames exist.
+static bool has_arcturus_manifest(const std::string &images) {
+    for (const auto &entry : fs::recursive_directory_iterator(images))
+        if (entry.path().filename() == ".arcturus-manifest.json")
+            return true;
+    return false;
+}
+
 sfm::Manifest SfmRunner::build_manifest(const SfmJob& job, const PrepResult& prep) {
     sfm::Manifest man;
     man.image_dir = prep.image_dir;
@@ -491,6 +499,19 @@ sfm::Manifest SfmRunner::build_manifest(const SfmJob& job, const PrepResult& pre
     }
     man.rigs = build_rigs(job.prep, &prep);
     man.sequences = build_sequences(job);
+    for (const auto &entry : fs::recursive_directory_iterator(prep.image_dir)) {
+        if (entry.path().filename() != ".arcturus-manifest.json")
+            continue;
+        const auto calibrated = sfm::manifest_read(entry.path().string());
+        for (const auto &camera : calibrated.cameras) {
+            man.cameras.erase(
+                std::remove_if(man.cameras.begin(), man.cameras.end(),
+                               [&](const auto &c) { return c.prefix == camera.prefix; }),
+                man.cameras.end());
+            man.cameras.push_back(camera);
+        }
+        man.rigs.clear();
+    }
     return man;
 }
 
@@ -788,6 +809,11 @@ std::vector<std::string> SfmRunner::recon_args(const SfmJob& job,
     }
     for (const std::string& a : split_args(job.extra_args))
         argv.push_back(a);
+    if (has_arcturus_manifest(prep.image_dir)) {
+        argv.insert(argv.end(),
+                    {"--no-refine-extra-params", "--no-final-extra-params", "--exif-orientation",
+                     "none", "--no-orient", "--ba-real", "cpu", "--ba-real-coarse", "cpu"});
+    }
     return argv;
 }
 
@@ -866,17 +892,24 @@ void SfmRunner::run(SfmJob job) {
         now.present = true;
         now.engine = "builtin";
         now.args = recon_args(job, prep);
-        const std::string changed =
-            recon_stamp_change(read_recon_stamp(ws.string()), now);
+        const auto previous_stamp = read_recon_stamp(ws.string());
+        const std::string changed = recon_stamp_change(previous_stamp, now);
+        const bool arcturus = has_arcturus_manifest(prep.image_dir);
+        const auto aligned_marker = ws / ".arcturus-aligned";
 
         // A model already there is reused whoever made it, which is how a
         // finished dataset gets masks and geometry. The one exception is a
         // model this panel built and has since been asked to build differently.
         const bool reuse_model = prior.model && !job.redo_model &&
-                                 (!job.settings_built_model || changed.empty());
+                                 (!job.settings_built_model || changed.empty()) &&
+                                 (!arcturus || (previous_stamp.present && changed.empty() &&
+                                                fs::exists(aligned_marker) &&
+                                                fs::exists(ws / "scene.xrSceneTransform.json")));
         if (reuse_model) {
             log(fmt(lmsg::sfm_reusing_model, {ws.string()}), /*detail=*/false);
         } else {
+            if (arcturus)
+                fs::remove(aligned_marker);
             if (prior.model && job.settings_built_model && !changed.empty())
                 log(fmt(lmsg::sfm_settings_changed, {changed}), /*detail=*/false);
             set_stage(Stage::Features, lmsg::stage_reconstructing_features.get());
@@ -984,7 +1017,12 @@ void SfmRunner::run(SfmJob job) {
         // transforms.json or a Metashape export, which has no sparse/ at all.
         if (!reuse_model && !has_model(ws / "sparse"))
             return fail(lmsg::err_no_reconstruction.get());
-        if (!reuse_model) write_recon_stamp(ws.string(), now);
+        if (!reuse_model) {
+            align_arcturus_dataset(ws.string(), prep.image_dir);
+            if (fs::exists(ws / "alignment.json"))
+                _not_metric = false;
+            write_recon_stamp(ws.string(), now);
+        }
 
         // ---- 3. depth and normals -------------------------------------------
         take_geometry(job);

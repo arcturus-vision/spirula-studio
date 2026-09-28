@@ -1,3 +1,4 @@
+#include "i18n/catalog/Arcturus.h"
 // GuiApp.cpp -- see GuiApp.h.
 
 #include "app/gui/GuiApp.h"
@@ -1075,6 +1076,14 @@ void GuiApp::open_dataset(std::string dir, std::string image_dir,
     // thing anyone would look at if the result seems wrong.
     if (dir != _cfg.data && !keep_log) clear_log();
     _cfg.data = dir;
+    if (fs::exists(fs::path(dir) / "scene.xrSceneTransform.json")) {
+        _cfg.scene_center = "none";
+        _cfg.relative_scale = 1.0f;
+        _cfg.center_method = "none";
+        _cfg.orientation_method = "none";
+        _cfg.auto_scale_poses = false;
+        _cfg.warp_to_pinhole = false;
+    }
     // image_dir / mask_dir: the runner hands its (possibly external) folders
     // over in-memory right after a run -- photos indexed where they are keep
     // their masks there too. Otherwise the dataparser defaults apply and the
@@ -3613,6 +3622,12 @@ void GuiApp::draw_sensor_badge(const PrepInput& s) {
     if (!t.done) {
         ImGui::SameLine();
         ui::TextDisabled(dmsg::sensors_reading);
+        return;
+    }
+    if (t.arcturus) {
+        ImGui::SameLine();
+        ui::TextDisabled(spirula::i18n::msg::arcturus::calibrated);
+        ui::help_on_hover(spirula::i18n::msg::arcturus::import_help);
         return;
     }
     if (!s.is_video) {
