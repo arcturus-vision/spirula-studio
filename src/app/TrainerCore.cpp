@@ -1643,6 +1643,10 @@ void TrainerSession::save_checkpoint(int step, bool full) {
         fs::copy_file(ckpt / "background.webp", out_dir / "background.webp",
                       fs::copy_options::overwrite_existing, bg_ec);
     }
+    const fs::path xr = fs::path(cfg.data) / "scene.xrSceneTransform.json";
+    if (ds.center_mode == "none" && cfg.relative_scale.value_or(1.0f) == 1.0f && fs::exists(xr))
+        fs::copy_file(xr, ckpt / "splat.xrSceneTransform.json",
+                      fs::copy_options::overwrite_existing);
     if (cfg.save_only_latest_checkpoint) {
         std::vector<fs::path> stale;
         for (const auto& e : fs::directory_iterator(out_dir)) {

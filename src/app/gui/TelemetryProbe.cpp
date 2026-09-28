@@ -4,6 +4,7 @@
 
 #ifdef SS_TOOL_SFM
 #include "sfm/core/Attitude.h"
+#include "sfm/core/ArcturusCapture.h"
 #include "sfm/core/Exif.h"
 #include "sfm/core/Telemetry.h"
 #endif
@@ -29,6 +30,14 @@ TelemetryInfo probe(const std::string& path, bool is_video) {
     out.done = true;
 #ifdef SS_TOOL_SFM
     if (is_video) {
+        try {
+            sfm::ArcturusCapture capture;
+            out.arcturus = sfm::read_arcturus_capture(path, capture);
+            if (out.arcturus)
+                return out;
+        } catch (const std::exception &) {
+            return out;
+        }
         sfm::Telemetry t;
         std::string err;
         if (!sfm::telemetry_read(path, t, err)) return out;

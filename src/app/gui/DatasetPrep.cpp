@@ -1,6 +1,7 @@
 // DatasetPrep.cpp -- see DatasetPrep.h.
 
 #include "app/gui/DatasetPrep.h"
+#include "app/gui/ArcturusImport.h"
 
 #include "app/CubeLut.h"
 #include "app/LidarDataset.h"
@@ -1952,6 +1953,9 @@ static bool same_path(const std::string& a, const std::string& b) {
 bool DatasetPrep::extract_video(const PrepJob& job, const PrepInput& in,
                                 const std::string& images, PrepResult& out,
                                 std::string& error) {
+    if (extract_arcturus(job, in, images, out, _cancel,
+                         [this](const std::string& line) { log(line, false); }, _prog))
+        return true;
     // The run preflight checked the completed record and this source's bytes.
     if (job.redo_frames) clear_generated(images, job.workspace);
     if (job.resume && !job.redo_frames) {
