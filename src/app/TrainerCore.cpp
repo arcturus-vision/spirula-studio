@@ -1872,7 +1872,7 @@ void TrainerSession::eval() {
         std::vector<float> gt, render;
         {
             std::lock_guard<std::mutex> lk(engine_mutex);
-            int n_view = engine_eval_forward(cfg.primitive, sh_deg, cfg.packed);
+            int n_view = engine_eval_forward((int)i, cfg.primitive, sh_deg, cfg.packed);
             if (n_view == 0) break;
             auto shape = engine_get_render_rgb_shape();
             B = std::get<0>(shape); H = std::get<1>(shape);
