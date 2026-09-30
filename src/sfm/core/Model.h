@@ -178,7 +178,7 @@ inline void Reconstruction::writeBinary(const std::string& dir) const {
             wr<int32_t>(f, camColmapId(c.model));
             wr<uint64_t>(f, c.width);
             wr<uint64_t>(f, c.height);
-            double ps[12];
+            double ps[61];
             packColmap(c, ps);
             for (int i = 0; i < camColmapParams(c.model); i++) wr<double>(f, ps[i]);
         }
@@ -238,7 +238,7 @@ inline Reconstruction Reconstruction::readBinary(const std::string& dir) {
             c.width = (int)rd<uint64_t>(f);
             c.height = (int)rd<uint64_t>(f);
             c.model = camFromColmapId(model);
-            double ps[12];
+            double ps[61];
             for (int k = 0; k < camColmapParams(c.model); k++) ps[k] = rd<double>(f);
             unpackColmap(c, ps);
             r.cameras[c.id] = c;

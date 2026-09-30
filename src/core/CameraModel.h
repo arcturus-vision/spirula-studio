@@ -38,15 +38,18 @@ enum class CameraDistortionType {
     None = 0,
     OpenCV = 1,
     ThinPrism = 2,
+    KBPolarSpline = 3,
 };
 
 // Storage width of the per-camera coefficient row. Every tier reads a prefix of
 // it; the tail is zero. MUST match kCameraDistortionParams in Common.cuh.
-inline constexpr int kCameraDistortionParams = 8;
+inline constexpr int kCameraDistortionParams = 58;
 
 inline constexpr int camera_distortion_num_params(CameraDistortionType d) {
-    return d == CameraDistortionType::None      ? 0 :
-           d == CameraDistortionType::OpenCV    ? 4 : 8;
+    return d == CameraDistortionType::None            ? 0
+           : d == CameraDistortionType::OpenCV        ? 4
+           : d == CameraDistortionType::KBPolarSpline ? 58
+                                                      : 8;
 }
 
 inline const char* camera_distortion_to_string(CameraDistortionType d) {
@@ -54,6 +57,8 @@ inline const char* camera_distortion_to_string(CameraDistortionType d) {
         case CameraDistortionType::None:      return "NONE";
         case CameraDistortionType::OpenCV:    return "OPENCV";
         case CameraDistortionType::ThinPrism: return "THIN_PRISM";
+        case CameraDistortionType::KBPolarSpline:
+            return "KB_POLAR_SPLINE";
         default:                              return "UNKNOWN";
     }
 }
@@ -61,6 +66,8 @@ inline const char* camera_distortion_to_string(CameraDistortionType d) {
 inline CameraDistortionType camera_distortion_from_name(const std::string& name) {
     if (name == "NONE")       return CameraDistortionType::None;
     if (name == "OPENCV")     return CameraDistortionType::OpenCV;
+    if (name == "KB_POLAR_SPLINE")
+        return CameraDistortionType::KBPolarSpline;
     if (name == "THIN_PRISM") return CameraDistortionType::ThinPrism;
     return (CameraDistortionType)-1;
 }
@@ -84,7 +91,7 @@ inline CameraDistortionType camera_distortion_demote(
             for (int i = 0; i < kCameraDistortionParams; i++) out[i] = 0.0f;
             return CameraDistortionType::None;
         }
-    } else {
+    } else if (tier != CameraDistortionType::KBPolarSpline) {
         for (int i = 0; i < kCameraDistortionParams; i++) out[i] = 0.0f;
         return CameraDistortionType::None;
     }

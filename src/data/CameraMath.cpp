@@ -1,4 +1,5 @@
 #include "data/CameraMath.h"
+#include "data/PolarSpline.h"
 
 #include "core/CameraModel.h"
 #include "data/SourceCamera.h"
@@ -34,7 +35,9 @@ bool norm3(double x, double y, double z, double out[3]) {
 
 bool has_distortion(int tier, const float* d) {
     if (tier == (int)CameraDistortionType::None) return false;
-    for (int i = 0; i < kCameraDistortionParams; i++) if (d[i] != 0.0f) return true;
+    for (int i = 0; i < camera_distortion_num_params((CameraDistortionType)tier); i++)
+        if (d[i] != 0.0f)
+            return true;
     return false;
 }
 
@@ -53,6 +56,13 @@ void distort_lens(double u, double v, int tier, const float* d, double out[2]) {
         return;
     }
     double radial = 1 + r2*(d[0] + r2*(d[1] + r2*(d[2] + r2*d[3])));
+    if (tier == (int)CameraDistortionType::KBPolarSpline) {
+        double shift[2];
+        polar_spline::shift(u * radial * d[4], v * radial * d[5], d + 8, shift);
+        out[0] = u * radial + shift[0] * d[6];
+        out[1] = v * radial + shift[1] * d[7];
+        return;
+    }
     out[0] = u*radial + 2*d[4]*u*v + d[5]*(r2 + 2*u*u) + d[6]*r2;
     out[1] = v*radial + 2*d[5]*u*v + d[4]*(r2 + 2*v*v) + d[7]*r2;
 }

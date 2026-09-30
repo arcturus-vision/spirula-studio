@@ -99,7 +99,7 @@ inline void writeMatches(const std::string& path, const MatchesDatabase& db) {
         int32_t model_id = camColmapId(cam.model);
         uint32_t np = (uint32_t)camColmapParams(cam.model);
         uint8_t prior = c < db.focal_prior.size() ? db.focal_prior[c] : 0;
-        double params[16] = {0};
+        double params[61] = {0};
         packColmap(cam, params);
         f.write((const char*)&cam.id, 4);
         f.write((const char*)&cam.width, 4);
@@ -164,7 +164,7 @@ inline MatchesDatabase readMatches(const std::string& path) {
             int32_t model_id = 0;
             uint32_t np = 0;
             uint8_t prior = 0;
-            double params[16] = {0};
+            double params[61] = {0};
             f.read((char*)&cam.id, 4);
             f.read((char*)&cam.width, 4);
             f.read((char*)&cam.height, 4);
@@ -172,7 +172,8 @@ inline MatchesDatabase readMatches(const std::string& path) {
             f.read((char*)&prior, 1);
             f.read((char*)&cam.pixel_scale, 8);
             f.read((char*)&np, 4);
-            if (np > 16) throw std::runtime_error("bad camera in " + path);
+            if (np > 61)
+                throw std::runtime_error("bad camera in " + path);
             f.read((char*)params, (std::streamsize)np * 8);
             cam.model = camFromColmapId(model_id);
             unpackColmap(cam, params);

@@ -12,10 +12,13 @@
     F(PINHOLE,         None)          \
     F(PINHOLE,         OpenCV)        \
     F(PINHOLE,         ThinPrism)     \
+    F(PINHOLE,         KBPolarSpline)     \
     F(FISHEYE,         None)          \
     F(FISHEYE,         OpenCV)        \
     F(FISHEYE,         ThinPrism)     \
+    F(FISHEYE,         KBPolarSpline)     \
     F(EQUISOLID,       None)          \
     F(EQUISOLID,       OpenCV)        \
     F(EQUISOLID,       ThinPrism)     \
+    F(EQUISOLID,       KBPolarSpline)     \
     F(EQUIRECTANGULAR, None)

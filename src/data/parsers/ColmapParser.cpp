@@ -1,3 +1,4 @@
+#include "i18n/catalog/Arcturus.h"
 // ColmapParser.cpp -- COLMAP-format reader for DatasetParser.h: the .bin/.txt
 // readers, frame assembly and pose conventions. Shared bake helpers live in
 // DatasetCommon.cpp.
@@ -72,16 +73,16 @@ struct BinReader {
 struct ColmapModelInfo { const char* name; int num_params; };
 const std::map<int, ColmapModelInfo>& colmap_model_table() {
     static const std::map<int, ColmapModelInfo> t = {
-        {0,  {"SIMPLE_PINHOLE", 3}},
-        {1,  {"PINHOLE", 4}},
-        {2,  {"SIMPLE_RADIAL", 4}},
-        {3,  {"RADIAL", 5}},
-        {4,  {"OPENCV", 8}},
-        {5,  {"OPENCV_FISHEYE", 8}},
-        {6,  {"FULL_OPENCV", 12}},
-        {7,  {"FOV", 5}},
-        {8,  {"SIMPLE_RADIAL_FISHEYE", 4}},
-        {9,  {"RADIAL_FISHEYE", 5}},
+        {0, {"SIMPLE_PINHOLE", 3}},
+        {1, {"PINHOLE", 4}},
+        {2, {"SIMPLE_RADIAL", 4}},
+        {3, {"RADIAL", 5}},
+        {4, {"OPENCV", 8}},
+        {5, {"OPENCV_FISHEYE", 8}},
+        {6, {"FULL_OPENCV", 12}},
+        {7, {"FOV", 5}},
+        {8, {"SIMPLE_RADIAL_FISHEYE", 4}},
+        {9, {"RADIAL_FISHEYE", 5}},
         {10, {"THIN_PRISM_FISHEYE", 12}},
         {11, {"RAD_TAN_THIN_PRISM_FISHEYE", 16}},
         {12, {"SIMPLE_DIVISION", 4}},
@@ -90,6 +91,7 @@ const std::map<int, ColmapModelInfo>& colmap_model_table() {
         {15, {"FISHEYE", 4}},
         {16, {"EUCM", 6}},
         {17, {"EQUIRECTANGULAR", 2}},
+        {1001, {"KB_POLAR_SPLINE", 61}},
     };
     return t;
 }
@@ -386,6 +388,24 @@ BakedIntrins bake_colmap_intrins(const ColmapCamera& cam) {
         o.distortion = CameraDistortionType::ThinPrism;
         o.dist[0] = P(4); o.dist[1] = P(5); o.dist[2] = P(6); o.dist[3] = P(7);
 
+    } else if (cam.model == "KB_POLAR_SPLINE") {
+        need(61);
+        if (!(P(8) > 0 && P(9) > 0 && P(10) > 0))
+            throw std::runtime_error(spirula::i18n::msg::arcturus::polar_scale.get());
+        o.fx = P(0);
+        o.fy = P(1);
+        o.cx = P(2);
+        o.cy = P(3);
+        o.model = CameraModelType::FISHEYE;
+        o.distortion = CameraDistortionType::KBPolarSpline;
+        for (int i = 0; i < 4; ++i)
+            o.dist[i] = P(4 + i);
+        o.dist[4] = P(0) / (P(8) * P(9));
+        o.dist[5] = P(1) / (P(8) * P(10));
+        o.dist[6] = P(9) / P(0);
+        o.dist[7] = P(10) / P(1);
+        for (int i = 0; i < 50; ++i)
+            o.dist[8 + i] = P(11 + i);
     } else if (cam.model == "THIN_PRISM_FISHEYE") {
         need(12);
         o.fx = P(0); o.fy = P(1); o.cx = P(2); o.cy = P(3);
@@ -580,7 +600,8 @@ bool colmap_preview_intrins(int model_id, int width, int height,
     out.cy = bi.cy;
     out.model = (int32_t)bi.model;
     out.distortion = (int32_t)bi.distortion;
-    static_assert(kCameraDistortionParams == 8, "PreviewIntrins::dist width");
+    static_assert(kCameraDistortionParams == std::tuple_size<decltype(out.dist)>::value,
+                  "PreviewIntrins::dist width");
     std::copy(bi.dist.begin(), bi.dist.end(), out.dist.begin());
     return true;
 }

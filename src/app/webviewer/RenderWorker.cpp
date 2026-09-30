@@ -217,8 +217,8 @@ struct RenderWorker::Impl {
         float vm[16];
         engine_viewmat(q.c2w, vm);
         float intr[4] = {q.fx, q.fy, q.cx, q.cy};
-        float dist[8];
-        std::memcpy(dist, q.dist, sizeof dist);
+        float dist[kCameraDistortionParams] = {};
+        std::memcpy(dist, q.dist, sizeof q.dist);
         const int sh_deg = q.sh_degree >= 0 ? q.sh_degree : 100;
         const std::string& primitive = q.primitive.empty() ? cfg.primitive : q.primitive;
         // Kept between frames: an export asks for hundreds at one size.
@@ -238,7 +238,7 @@ struct RenderWorker::Impl {
             set_camera_params(W, H, q.model, q.distortion,
                               tvp(vm, 4, {1, 4, 4}),
                               tvp(intr, 4, {1, 4}),
-                              tvp(dist, 4, {1, 8}));
+                              tvp(dist, 4, {1, kCameraDistortionParams}));
             forward_3dgs(primitive, sh_deg, cfg.packed, false, 0);
             engine_copy_render_to_host(tvp(rgb.data(), 4, {1, H, W, 3}), tv_null(),
                                        tvp(Ts.data(), 4, {1, H, W, 1}),
@@ -322,7 +322,7 @@ struct RenderWorker::Impl {
         vm[15] = 1.f;
 
         float intr[4] = {q.fx, q.fy, q.cx, q.cy};
-        float dist0[8] = {0};
+        float dist0[kCameraDistortionParams] = {0};
         // Distortion images are FULL render resolution (never-freed pool
         // slots) -- emit them only when the user is actually LOOKING at a
         // distortion buffer, and only offer those buffers when a distortion
@@ -357,10 +357,8 @@ struct RenderWorker::Impl {
             // than by whoever last touched the engine.
             if (cfg.scene_slot >= 0) engine_scene_activate(cfg.scene_slot);
 
-            set_camera_params(W, H, q.model, "NONE",
-                              tvp(vm, 4, {1, 4, 4}),
-                              tvp(intr, 4, {1, 4}),
-                              tvp(dist0, 4, {1, 8}));
+            set_camera_params(W, H, q.model, "NONE", tvp(vm, 4, {1, 4, 4}), tvp(intr, 4, {1, 4}),
+                              tvp(dist0, 4, {1, kCameraDistortionParams}));
             forward_3dgs(primitive, sh_deg, cfg.packed,
                          want_median, want_dist ? 2 : 0);
             engine_copy_render_to_host(

@@ -342,7 +342,7 @@ inline BundleLayout buildBundle(Reconstruction& rec, const BundleOptions& bopt) 
         uint32_t nf = (uint32_t)camNumFreeParams(c.model, pp, bopt.refine_extra_params);
         uint32_t off = (uint32_t)P.intr.size();
         uint32_t ni = (uint32_t)camNumParams(c.model);
-        double ps[12];
+        double ps[61];
         packIntrinsics(c, ps);
         for (uint32_t i = 0; i < ni; i++) P.intr.push_back(ps[i]);
         P.groups[g] = {off, P.free_intr, nf, (uint32_t)camBaModel(c.model)};

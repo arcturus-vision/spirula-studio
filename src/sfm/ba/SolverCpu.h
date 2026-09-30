@@ -644,7 +644,7 @@ private:
             pool_->run(nt, nthreads_, [&](int t, int) {
                 int64_t lo, hi;
                 taskRange(nPts_, nt, t, lo, hi);
-                double jcf[2 * kMaxCamDof], jpf[6], r[2];
+                double jcf[2 * (12 + 61)], jpf[6], r[2];
                 for (int64_t p = lo; p < hi; p++) {
                     double App[9] = {}, Bp[3] = {};
                     for (uint32_t o = P_.obs_ranges[p]; o < P_.obs_ranges[p + 1]; o++) {

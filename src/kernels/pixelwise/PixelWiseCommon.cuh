@@ -117,6 +117,7 @@ struct SlangPixelWiseDist<CameraDistortionType::TIER> {                         
 _SS_DEF_SLANG_PIXEL_WISE(None,      _none)
 _SS_DEF_SLANG_PIXEL_WISE(OpenCV,    _opencv)
 _SS_DEF_SLANG_PIXEL_WISE(ThinPrism, _prism)
+_SS_DEF_SLANG_PIXEL_WISE(KBPolarSpline, _polar)
 
 #undef _SS_DEF_SLANG_PIXEL_WISE
 
@@ -130,6 +131,7 @@ _SS_DEF_SLANG_PIXEL_WISE(ThinPrism, _prism)
         case CameraDistortionType::None:      BODY(CameraDistortionType::None);      break; \
         case CameraDistortionType::OpenCV:    BODY(CameraDistortionType::OpenCV);    break; \
         case CameraDistortionType::ThinPrism: BODY(CameraDistortionType::ThinPrism); break; \
+        case CameraDistortionType::KBPolarSpline: BODY(CameraDistortionType::KBPolarSpline); break; \
         default: throw std::runtime_error(                                         \
             "Unknown camera distortion: " + std::string(name));                    \
     } } while (0)

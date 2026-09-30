@@ -7,6 +7,7 @@
 #pragma once
 
 #include <cmath>
+#include "data/PolarSpline.h"
 #include <cstdint>
 #include <stdexcept>
 #include <string>
@@ -251,6 +252,19 @@ struct FisheyeModel {
     }
 };
 
+struct KBPolarSplineModel {
+    static constexpr int kNumIntr = 61;
+    static constexpr bool kPeriodicX = false;
+    template <class T> static void project(const T *c, const T p[3], T out[2]) {
+        FisheyeModel::project(c, p, out);
+        T shift[2];
+        polar_spline::shift((out[0] - c[6]) / (c[8] * c[9]), (out[1] - c[7]) / (c[8] * c[10]),
+                            c + 11, shift);
+        out[0] = out[0] + shift[0] * c[9];
+        out[1] = out[1] + shift[1] * c[10];
+    }
+};
+
 struct FullOpenCVModel {
     static constexpr int kNumIntr = 12;
     static constexpr bool kPeriodicX = false;
@@ -336,6 +350,9 @@ template <class Fn> inline void withModel(uint32_t model, Fn&& fn) {
         case 7: fn(FullOpenCVModel{}); return;
         case 8: fn(ThinPrismFisheyeModel{}); return;
         case 9: fn(EquirectModel{}); return;
+        case 10:
+            fn(KBPolarSplineModel{});
+            return;
     }
     throw std::runtime_error("camera model index outside the registry");
 }
@@ -492,6 +509,26 @@ inline void projectJacobian(const double* intr, const double p[3], const double 
         r[row] = rr[row].a;
         for (int k = 0; k < 3; k++) dp[row][k] = rr[row].d[k];
         for (int i = 0; i < NI; i++) di[row * NI + i] = rr[row].d[3 + i];
+    }
+}
+
+template <>
+inline void projectJacobian<KBPolarSplineModel>(const double *intr, const double p[3],
+                                                const double obs[2], double r[2], double dp[2][3],
+                                                double *di) {
+    Jet<5> pc[3], ic[61], px[2];
+    for (int i = 0; i < 3; ++i)
+        pc[i] = Jet<5>::var(p[i], i);
+    for (int i = 0; i < 61; ++i)
+        ic[i] = i < 2 ? Jet<5>::var(intr[i], 3 + i) : Jet<5>(intr[i]);
+    KBPolarSplineModel::project(ic, pc, px);
+    std::fill(di, di + 122, 0.0);
+    for (int row = 0; row < 2; ++row) {
+        r[row] = px[row].a - obs[row];
+        for (int k = 0; k < 3; ++k)
+            dp[row][k] = px[row].d[k];
+        for (int k = 0; k < 2; ++k)
+            di[row * 61 + k] = px[row].d[3 + k];
     }
 }
 

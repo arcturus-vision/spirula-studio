@@ -247,6 +247,7 @@ bool equirect_proj_3dgs<D : ICameraDistortion, let assume_valid : bool>(
 _DEF_proj_3dgs_nav(_none, DistNone, 1)
 _DEF_proj_3dgs_nav(_opencv, DistOpenCV, 4)
 _DEF_proj_3dgs_nav(_prism, DistThinPrism, 8)
+_DEF_proj_3dgs_nav(_polar, DistKBPolarSpline, 58)
 
 #undef _DEF_proj_3dgs_nav
 
@@ -611,7 +612,8 @@ void projection_3dgs<
 #define _DEF_projection_3dgs_tiers(base, MODEL, E3D) \
     _DEF_projection_3dgs(base##_none, MODEL, DistNone, 1, false, E3D) \
     _DEF_projection_3dgs(base##_opencv, MODEL, DistOpenCV, 4, false, E3D) \
-    _DEF_projection_3dgs(base##_prism, MODEL, DistThinPrism, 8, false, E3D)
+    _DEF_projection_3dgs(base##_prism, MODEL, DistThinPrism, 8, false, E3D) \
+    _DEF_projection_3dgs(base##_polar, MODEL, DistKBPolarSpline, 58, false, E3D)
 
 _DEF_projection_3dgs_tiers(projection_3dgs_persp, CameraModelType::PINHOLE, false)
 _DEF_projection_3dgs_tiers(projection_3dgs_fisheye, CameraModelType::FISHEYE, false)
@@ -651,7 +653,8 @@ interface _DiffProjection3DGS<let NC : int>
 #define _DEF_projection_3dgs_interface_tiers(base, MODEL, E3D) \
     _DEF_projection_3dgs_interface(base##_none, MODEL, DistNone, 1, true, E3D) \
     _DEF_projection_3dgs_interface(base##_opencv, MODEL, DistOpenCV, 4, true, E3D) \
-    _DEF_projection_3dgs_interface(base##_prism, MODEL, DistThinPrism, 8, true, E3D)
+    _DEF_projection_3dgs_interface(base##_prism, MODEL, DistThinPrism, 8, true, E3D) \
+    _DEF_projection_3dgs_interface(base##_polar, MODEL, DistKBPolarSpline, 58, true, E3D)
 
 _DEF_projection_3dgs_interface_tiers(_DiffProjection3DGS_3dgs_persp, CameraModelType::PINHOLE, false)
 _DEF_projection_3dgs_interface_tiers(_DiffProjection3DGS_3dgs_fisheye, CameraModelType::FISHEYE, false)
@@ -720,7 +723,8 @@ void _projection_3dgs_vjp<let NC : int, ProjT : _DiffProjection3DGS<NC> >(
 #define _DEF_projection_3dgs_vjp_tiers(base, iface) \
     _DEF_projection_3dgs_vjp(base##_none_vjp, iface##_none, 1) \
     _DEF_projection_3dgs_vjp(base##_opencv_vjp, iface##_opencv, 4) \
-    _DEF_projection_3dgs_vjp(base##_prism_vjp, iface##_prism, 8)
+    _DEF_projection_3dgs_vjp(base##_prism_vjp, iface##_prism, 8) \
+    _DEF_projection_3dgs_vjp(base##_polar_vjp, iface##_polar, 58)
 
 _DEF_projection_3dgs_vjp_tiers(projection_3dgs_persp, _DiffProjection3DGS_3dgs_persp)
 _DEF_projection_3dgs_vjp_tiers(projection_3dgs_fisheye, _DiffProjection3DGS_3dgs_fisheye)
