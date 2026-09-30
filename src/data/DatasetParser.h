@@ -43,7 +43,7 @@ struct PreviewIntrins {
     // kCameraDistortionParams wide; the literal is here because core/Common.cuh
     // defines the same constant for the device side and the two headers cannot
     // both be included in one translation unit.
-    std::array<float, 8> dist{};
+    std::array<float, 58> dist{};
 };
 
 // False for a model id this reader does not know or a parameter count that

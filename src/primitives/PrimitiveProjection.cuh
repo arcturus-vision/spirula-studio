@@ -59,7 +59,8 @@ struct Slang3DGSProj<CameraModelType::MODEL, CameraDistortionType::TIER> {      
 #define _SS_DEF_3DGS_PROJ_TIERS(MODEL, MODEL_SUFFIX)          \
     _SS_DEF_3DGS_PROJ(MODEL, None,      MODEL_SUFFIX, _none)  \
     _SS_DEF_3DGS_PROJ(MODEL, OpenCV,    MODEL_SUFFIX, _opencv)\
-    _SS_DEF_3DGS_PROJ(MODEL, ThinPrism, MODEL_SUFFIX, _prism)
+    _SS_DEF_3DGS_PROJ(MODEL, ThinPrism, MODEL_SUFFIX, _prism) \
+    _SS_DEF_3DGS_PROJ(MODEL, KBPolarSpline, MODEL_SUFFIX, _polar)
 
 _SS_DEF_3DGS_PROJ_TIERS(PINHOLE, persp)
 _SS_DEF_3DGS_PROJ_TIERS(FISHEYE, fisheye)

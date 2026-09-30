@@ -126,14 +126,16 @@ enum class CameraDistortionType {
     None = 0,
     OpenCV = 1,
     ThinPrism = 2,
+    KBPolarSpline = 3,
 };
 
 // Storage width of one camera's coefficient row. Each tier reads a prefix.
-inline constexpr int kCameraDistortionParams = 8;
+inline constexpr int kCameraDistortionParams = 58;
 
 inline constexpr int camera_distortion_num_params(CameraDistortionType d) {
     return d == CameraDistortionType::None      ? 0 :
-           d == CameraDistortionType::OpenCV    ? 4 : 8;
+           d == CameraDistortionType::OpenCV    ? 4 :
+           d == CameraDistortionType::KBPolarSpline ? 58 : 8;
 }
 
 #ifdef __CUDACC__
@@ -201,6 +203,7 @@ inline CameraModelType cmt(const std::string &s) {
 inline CameraDistortionType cdt(const std::string &s) {
     return (s == "NONE") ? CameraDistortionType::None :
         (s == "OPENCV") ? CameraDistortionType::OpenCV :
+        (s == "KB_POLAR_SPLINE") ? CameraDistortionType::KBPolarSpline :
         (s == "THIN_PRISM") ? CameraDistortionType::ThinPrism :
         (CameraDistortionType)-1;
 }

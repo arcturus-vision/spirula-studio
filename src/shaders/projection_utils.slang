@@ -273,6 +273,47 @@ struct DistThinPrism : ICameraDistortion {
 };
 
 
+struct DistKBPolarSpline : ICameraDistortion {
+    static const int kNumParams = 58;
+    static const bool kIsIdentity = false;
+    [Differentiable]
+    static float cubic(float a, float b, float c, float d, float t) {
+        return b + 0.5f * t * (c - a + t * (2*a - 5*b + 4*c - d + t * (3*(b-c) + d-a)));
+    }
+    [Differentiable]
+    static float2 distort(float2 uv, no_diff float coeffs[58]) {
+        float r2 = dot(uv, uv);
+        float radial = 1 + r2*(coeffs[0] + r2*(coeffs[1] + r2*(coeffs[2] + r2*coeffs[3])));
+        float2 kb = uv * radial;
+        float2 grid = kb * float2(coeffs[4], coeffs[5]);
+        if (dot(grid, grid) < 1e-20f) return kb;
+        float radius = length(grid);
+        float theta = atan2(grid.y, grid.x) * 0.7957747154594767f;
+        if (theta < 0) theta += 5;
+        no_diff int r = int(floor(radius)), c = int(floor(theta));
+        float2 rt = float2(0);
+        [ForceUnroll]
+        for (int axis = 0; axis < 2; ++axis) {
+            float rows[4];
+            [ForceUnroll]
+            for (int i = 0; i < 4; ++i) {
+                no_diff int row = clamp(r + i - 1, 0, 6);
+                float nodes[4];
+                [ForceUnroll]
+                for (int j = 0; j < 4; ++j) {
+                    no_diff int col = ((c + j - 1) % 5 + 5) % 5;
+                    nodes[j] = row < 2 ? 0 : coeffs[8 + axis*25 + (row-2)*5 + col];
+                }
+                rows[i] = cubic(nodes[0], nodes[1], nodes[2], nodes[3], theta - float(c));
+            }
+            rt[axis] = cubic(rows[0], rows[1], rows[2], rows[3], radius - float(r));
+        }
+        float2 shift = float2(rt.x*grid.x - rt.y*grid.y, rt.x*grid.y + rt.y*grid.x) / radius;
+        return kb + shift * float2(coeffs[6], coeffs[7]);
+    }
+};
+
+
 [ForceInline]
 [Differentiable]
 float2x2 camera_distortion_jac<D : ICameraDistortion>(
@@ -824,6 +865,7 @@ bool generate_ray<D : ICameraDistortion>(
 _DEF_DIST_ENTRIES(_none, DistNone, 1)
 _DEF_DIST_ENTRIES(_opencv, DistOpenCV, 4)
 _DEF_DIST_ENTRIES(_prism, DistThinPrism, 8)
+_DEF_DIST_ENTRIES(_polar, DistKBPolarSpline, 58)
 
 #undef _DEF_DIST_ENTRIES
 

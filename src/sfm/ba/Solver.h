@@ -96,6 +96,9 @@ public:
     }
 
     void init() {
+        for (const auto &g : P_.groups)
+            if (!kModels[g.model].cost_entry)
+                opt_.real = RealCfg::CPU;
         auto prof_t0 = std::chrono::steady_clock::now();
         auto prof_lap = [&prof_t0] {
             auto t1 = std::chrono::steady_clock::now();

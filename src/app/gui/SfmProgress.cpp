@@ -133,7 +133,8 @@ bool read_live_model(const std::string& dir, int64_t& mtime, LiveModel& out) {
         ds.heights[i] = (int32_t)h;
         const int model_id = (int)r.u32();
         const uint32_t np = r.u32();
-        if (!r.ok || np > 16) return false;
+        if (!r.ok || np > 61)
+            return false;
         params.resize(np);
         for (uint32_t k = 0; k < np; k++) r.take(&params[k], 8);
         // The parser's own mapping, so a fisheye draws as a fisheye rather

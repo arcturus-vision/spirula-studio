@@ -145,7 +145,7 @@ inline CamDistSpec cam_dist_spec(const std::string& camera_model,
                                  const std::string& distortion) {
     const CameraModelType m = cmt(camera_model);
     const CameraDistortionType d = cdt(distortion);
-    bool ok = (int)m >= 0 && (int)m <= 3 && (int)d >= 0 && (int)d <= 2;
+    bool ok = (int)m >= 0 && (int)m <= 3 && (int)d >= 0 && (int)d <= 3;
     if (ok && m == CameraModelType::EQUIRECTANGULAR)
         ok = d == CameraDistortionType::None;
     if (!ok)
@@ -160,7 +160,7 @@ inline CamDistSpec cam_dist_spec(const std::string& camera_model,
 // blits the dataset cameras through a free-navigation view camera).
 inline uint32_t distortion_spec(const std::string& distortion) {
     const CameraDistortionType d = cdt(distortion);
-    if ((int)d < 0 || (int)d > 2)
+    if ((int)d < 0 || (int)d > 3)
         throw std::runtime_error("Unsupported camera distortion tier");
     return (uint32_t)d;
 }

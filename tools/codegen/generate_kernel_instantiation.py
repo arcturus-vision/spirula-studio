@@ -19,12 +19,15 @@ kCameraVariants = [
     ("CameraModelType::PINHOLE",         "CameraDistortionType::None"),
     ("CameraModelType::PINHOLE",         "CameraDistortionType::OpenCV"),
     ("CameraModelType::PINHOLE",         "CameraDistortionType::ThinPrism"),
+    ("CameraModelType::PINHOLE",         "CameraDistortionType::KBPolarSpline"),
     ("CameraModelType::FISHEYE",         "CameraDistortionType::None"),
     ("CameraModelType::FISHEYE",         "CameraDistortionType::OpenCV"),
     ("CameraModelType::FISHEYE",         "CameraDistortionType::ThinPrism"),
+    ("CameraModelType::FISHEYE",         "CameraDistortionType::KBPolarSpline"),
     ("CameraModelType::EQUISOLID",       "CameraDistortionType::None"),
     ("CameraModelType::EQUISOLID",       "CameraDistortionType::OpenCV"),
     ("CameraModelType::EQUISOLID",       "CameraDistortionType::ThinPrism"),
+    ("CameraModelType::EQUISOLID",       "CameraDistortionType::KBPolarSpline"),
     ("CameraModelType::EQUIRECTANGULAR", "CameraDistortionType::None"),
 ]
 

@@ -662,5 +662,6 @@ void depth_normal_loss_vjp<D : ICameraDistortion>(
 _DEF_PIXELWISE_DIST_ENTRIES(_none, DistNone, 1)
 _DEF_PIXELWISE_DIST_ENTRIES(_opencv, DistOpenCV, 4)
 _DEF_PIXELWISE_DIST_ENTRIES(_prism, DistThinPrism, 8)
+_DEF_PIXELWISE_DIST_ENTRIES(_polar, DistKBPolarSpline, 58)
 
 #undef _DEF_PIXELWISE_DIST_ENTRIES

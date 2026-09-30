@@ -7,7 +7,7 @@
 template void rasterize_to_pixels_eval3d_bwd_kernel_wrapper<
     Vanilla3DGUT<0>,
     CameraModelType::FISHEYE,
-    CameraDistortionType::OpenCV,
+    CameraDistortionType::None,
     DistortionType::None,
     true,
     DensifyAccumMode::Avg,
@@ -55,7 +55,7 @@ template void rasterize_to_pixels_eval3d_bwd_kernel_wrapper<
 template void rasterize_to_pixels_eval3d_bwd_kernel_wrapper<
     Vanilla3DGUT<0>,
     CameraModelType::FISHEYE,
-    CameraDistortionType::OpenCV,
+    CameraDistortionType::None,
     DistortionType::None,
     true,
     DensifyAccumMode::Avg,
@@ -103,7 +103,7 @@ template void rasterize_to_pixels_eval3d_bwd_kernel_wrapper<
 template void rasterize_to_pixels_eval3d_bwd_kernel_wrapper<
     Vanilla3DGUT<0>,
     CameraModelType::FISHEYE,
-    CameraDistortionType::OpenCV,
+    CameraDistortionType::None,
     DistortionType::None,
     false,
     DensifyAccumMode::None,
@@ -151,7 +151,7 @@ template void rasterize_to_pixels_eval3d_bwd_kernel_wrapper<
 template void rasterize_to_pixels_eval3d_bwd_kernel_wrapper<
     Vanilla3DGUT<0>,
     CameraModelType::FISHEYE,
-    CameraDistortionType::OpenCV,
+    CameraDistortionType::None,
     DistortionType::None,
     false,
     DensifyAccumMode::None,
@@ -199,7 +199,7 @@ template void rasterize_to_pixels_eval3d_bwd_kernel_wrapper<
 template void rasterize_to_pixels_eval3d_bwd_kernel_wrapper<
     Vanilla3DGUT<0>,
     CameraModelType::FISHEYE,
-    CameraDistortionType::OpenCV,
+    CameraDistortionType::None,
     DistortionType::None,
     false,
     DensifyAccumMode::Max,
@@ -247,7 +247,7 @@ template void rasterize_to_pixels_eval3d_bwd_kernel_wrapper<
 template void rasterize_to_pixels_eval3d_bwd_kernel_wrapper<
     Vanilla3DGUT<0>,
     CameraModelType::FISHEYE,
-    CameraDistortionType::OpenCV,
+    CameraDistortionType::None,
     DistortionType::None,
     false,
     DensifyAccumMode::Max,
@@ -295,7 +295,7 @@ template void rasterize_to_pixels_eval3d_bwd_kernel_wrapper<
 template void rasterize_to_pixels_eval3d_bwd_kernel_wrapper<
     Vanilla3DGUT<0>,
     CameraModelType::FISHEYE,
-    CameraDistortionType::OpenCV,
+    CameraDistortionType::None,
     DistortionType::None,
     false,
     DensifyAccumMode::Sum,
@@ -343,7 +343,7 @@ template void rasterize_to_pixels_eval3d_bwd_kernel_wrapper<
 template void rasterize_to_pixels_eval3d_bwd_kernel_wrapper<
     Vanilla3DGUT<0>,
     CameraModelType::FISHEYE,
-    CameraDistortionType::OpenCV,
+    CameraDistortionType::None,
     DistortionType::None,
     false,
     DensifyAccumMode::Sum,
@@ -391,7 +391,7 @@ template void rasterize_to_pixels_eval3d_bwd_kernel_wrapper<
 template void rasterize_to_pixels_eval3d_bwd_kernel_wrapper<
     Vanilla3DGUT<0>,
     CameraModelType::FISHEYE,
-    CameraDistortionType::OpenCV,
+    CameraDistortionType::None,
     DistortionType::None,
     false,
     DensifyAccumMode::Avg,

@@ -15,7 +15,7 @@
 
 // Storage width of one camera's coefficient row; must match
 // kCameraDistortionParams in core/CameraModel.h. Each tier reads a prefix.
-static const int kDistCoeffRow = 8;
+static const int kDistCoeffRow = 58;
 
 // The identity tier reads nothing: its one slot is unused (Slang has no
 // zero-length array), and an undistorted launch passes the 4 KB zeroed
@@ -48,6 +48,7 @@ bool pixel_ray<D : ICameraDistortion>(float* dist_coeffs, uint cid,
     switch (kDistortion) {                      \
     case 0:  CALL(DistNone); break;             \
     case 1:  CALL(DistOpenCV); break;           \
+    case 3: CALL(DistKBPolarSpline); break;        \
     default: CALL(DistThinPrism); break;        \
     }
 
@@ -60,6 +61,7 @@ bool pixel_ray<D : ICameraDistortion>(float* dist_coeffs, uint cid,
         switch (kDistortion) {                                          \
         case 0:  CALL(CameraModelType::FISHEYE, DistNone); break;       \
         case 1:  CALL(CameraModelType::FISHEYE, DistOpenCV); break;     \
+        case 3: CALL(CameraModelType::FISHEYE, DistKBPolarSpline); break;  \
         default: CALL(CameraModelType::FISHEYE, DistThinPrism); break;  \
         }                                                               \
         break;                                                          \
@@ -67,6 +69,7 @@ bool pixel_ray<D : ICameraDistortion>(float* dist_coeffs, uint cid,
         switch (kDistortion) {                                          \
         case 0:  CALL(CameraModelType::EQUISOLID, DistNone); break;     \
         case 1:  CALL(CameraModelType::EQUISOLID, DistOpenCV); break;   \
+        case 3: CALL(CameraModelType::EQUISOLID, DistKBPolarSpline); break;\
         default: CALL(CameraModelType::EQUISOLID, DistThinPrism); break;\
         }                                                               \
         break;                                                          \
@@ -77,6 +80,7 @@ bool pixel_ray<D : ICameraDistortion>(float* dist_coeffs, uint cid,
         switch (kDistortion) {                                          \
         case 0:  CALL(CameraModelType::PINHOLE, DistNone); break;       \
         case 1:  CALL(CameraModelType::PINHOLE, DistOpenCV); break;     \
+        case 3: CALL(CameraModelType::PINHOLE, DistKBPolarSpline); break;  \
         default: CALL(CameraModelType::PINHOLE, DistThinPrism); break;  \
         }                                                               \
         break;                                                          \

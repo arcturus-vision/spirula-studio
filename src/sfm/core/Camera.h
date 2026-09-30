@@ -27,6 +27,8 @@
 #pragma once
 
 #include <cmath>
+#include <array>
+#include "data/PolarSpline.h"
 #include <cstdint>
 #include <stdexcept>
 #include <string>
@@ -37,8 +39,15 @@
 namespace sfm {
 
 enum class CamModel {
-    SimplePinhole, Pinhole, Radial, OpenCV, OpenCVFisheye, FullOpenCV, ThinPrismFisheye,
-    Equirect
+    SimplePinhole,
+    Pinhole,
+    Radial,
+    OpenCV,
+    OpenCVFisheye,
+    FullOpenCV,
+    ThinPrismFisheye,
+    Equirect,
+    KBPolarSpline
 };
 
 struct Camera {
@@ -51,6 +60,7 @@ struct Camera {
     double k3 = 0, k4 = 0;   // extra radial (fisheye k3,k4; FullOpenCV k3 + denominator k4)
     double k5 = 0, k6 = 0;   // FullOpenCV rational denominator (with k4)
     double sx1 = 0, sy1 = 0; // thin-prism (ThinPrismFisheye only)
+    std::array<double, 53> polar{}; // spacing, scale U/V, radial and tangential knots
 
     // How many of this camera's pixels one *measurement* pixel is worth: the
     // source image's size over the size the extractor actually ran SIFT at
@@ -76,7 +86,8 @@ struct Camera {
     double errRad(double px) const { return px * pixel_scale / std::max(1e-6, focal()); }
 
     bool isFisheye() const {
-        return model == CamModel::OpenCVFisheye || model == CamModel::ThinPrismFisheye;
+        return model == CamModel::KBPolarSpline || model == CamModel::OpenCVFisheye ||
+               model == CamModel::ThinPrismFisheye;
     }
     // Spherical (omnidirectional) projection: the whole 4*pi is representable,
     // there is no focal length and no distortion. COLMAP's IsSpherical().
@@ -152,13 +163,12 @@ struct Camera {
         return th;
     }
 
-    // Camera-frame 3D point -> pixel.
-    //  - pinhole family: Brown-Conrady radial+tangential; FullOpenCV divides the
-    //    radial term by the rational denominator 1 + k4 r^2 + k5 r^4 + k6 r^6.
-    //  - OpenCV_FISHEYE: Kannala-Brandt, radial-only in theta.
-    //  - THIN_PRISM_FISHEYE: KB radial + tangential + thin-prism, all in the
-    //    equidistant coords (uf,vf) = theta*(x,y)/r.
-    // Both fisheye models are valid for rays past 90 deg (p.z <= 0).
+    Vec2 polarShift(const Vec2 &px) const {
+        double shift[2];
+        polar_spline::shift((px.x - cx) / (polar[1] * polar[0]),
+                            (px.y - cy) / (polar[2] * polar[0]), polar.data() + 3, shift);
+        return {shift[0] * polar[1], shift[1] * polar[2]};
+    }
     Vec2 project(const Vec3& p) const {
         if (model == CamModel::Equirect) {
             // azimuth from +z toward +x, elevation from the equator toward -y
@@ -168,12 +178,18 @@ struct Camera {
             double phi = std::atan2(-p.y, std::hypot(p.x, p.z));
             return {fx * theta + cx, cy - fy * phi};
         }
-        if (model == CamModel::OpenCVFisheye) {
+        if (model == CamModel::OpenCVFisheye || model == CamModel::KBPolarSpline) {
             double r = std::hypot(p.x, p.y);
             double theta = std::atan2(r, p.z);  // [0, pi], smooth at the axis
             double thd = kbThetaD(theta);
             double scale = r > 1e-12 ? thd / r : 0.0;  // on-axis -> principal point
-            return {fx * scale * p.x + cx, fy * scale * p.y + cy};
+            Vec2 px{fx * scale * p.x + cx, fy * scale * p.y + cy};
+            if (model == CamModel::KBPolarSpline) {
+                auto d = polarShift(px);
+                px.x += d.x;
+                px.y += d.y;
+            }
+            return px;
         }
         if (model == CamModel::ThinPrismFisheye) {
             double r = std::hypot(p.x, p.y);
@@ -230,12 +246,7 @@ struct Camera {
         return {xu, yu};
     }
 
-    // Pixel -> unit viewing ray (bearing) in camera coordinates. For the
-    // pinhole family this is normalize(unproject(px), 1), i.e. a forward ray
-    // (z>0). This is the geometry core's interchange type (D31): a fisheye model
-    // (D29 phase C) returns a ray that can point sideways or backward (z<=0),
-    // which z=1 normalized coordinates cannot represent -- that is the whole
-    // reason PnP / triangulation / relative pose work in bearings.
+    // Unit bearing remains valid past the forward hemisphere.
     Vec3 bearing(const Vec2& px) const {
         if (model == CamModel::Equirect) {
             double theta = (px.x - cx) / fx;
@@ -243,8 +254,15 @@ struct Camera {
             double cp = std::cos(phi);
             return {cp * std::sin(theta), -std::sin(phi), cp * std::cos(theta)};
         }
-        if (model == CamModel::OpenCVFisheye) {
-            double u = (px.x - cx) / fx, v = (px.y - cy) / fy;
+        if (model == CamModel::OpenCVFisheye || model == CamModel::KBPolarSpline) {
+            Vec2 q = px;
+            if (model == CamModel::KBPolarSpline) {
+                for (int i = 0; i < 12; ++i) {
+                    auto d = polarShift(q);
+                    q = {px.x - d.x, px.y - d.y};
+                }
+            }
+            double u = (q.x - cx) / fx, v = (q.y - cy) / fy;
             double rd = std::hypot(u, v);  // = theta_d
             if (rd < 1e-12) return {0, 0, 1};
             double theta = kbThetaFromThetaD(rd);
@@ -305,14 +323,15 @@ struct CamModelInfo {
 // The BA layout is (focal, extra params, cx, cy) -- COLMAP's order with the
 // principal point moved last, so "free" is always a prefix (D50).
 static constexpr CamModelInfo kCamModelInfo[] = {
-    {CamModel::SimplePinhole,    0, 4,  3, 1, 2, true,   3, "simple-pinhole"},
-    {CamModel::Pinhole,          1, 5,  4, 2, 2, true,   4, "pinhole"},
-    {CamModel::Radial,           3, 2,  5, 1, 2, true,   5, "radial"},
-    {CamModel::OpenCV,           4, 3,  8, 2, 2, true,   8, "opencv"},
-    {CamModel::OpenCVFisheye,    5, 6,  8, 2, 2, true,   8, "opencv-fisheye"},
-    {CamModel::FullOpenCV,       6, 7, 12, 2, 2, true,  12, "full-opencv"},
-    {CamModel::ThinPrismFisheye, 10, 8, 12, 2, 2, true,  12, "thin-prism-fisheye"},
-    {CamModel::Equirect,         17, 9,  2, 2, 0, false,  2, "equirectangular"},
+    {CamModel::SimplePinhole, 0, 4, 3, 1, 2, true, 3, "simple-pinhole"},
+    {CamModel::Pinhole, 1, 5, 4, 2, 2, true, 4, "pinhole"},
+    {CamModel::Radial, 3, 2, 5, 1, 2, true, 5, "radial"},
+    {CamModel::OpenCV, 4, 3, 8, 2, 2, true, 8, "opencv"},
+    {CamModel::OpenCVFisheye, 5, 6, 8, 2, 2, true, 8, "opencv-fisheye"},
+    {CamModel::FullOpenCV, 6, 7, 12, 2, 2, true, 12, "full-opencv"},
+    {CamModel::ThinPrismFisheye, 10, 8, 12, 2, 2, true, 12, "thin-prism-fisheye"},
+    {CamModel::KBPolarSpline, 1001, 10, 61, 2, 2, true, 61, "kb-polar-spline"},
+    {CamModel::Equirect, 17, 9, 2, 2, 0, false, 2, "equirectangular"},
 };
 
 inline const CamModelInfo& camInfo(CamModel m) {
@@ -326,12 +345,16 @@ inline int camNumParams(CamModel m) { return camInfo(m).ba_params; }  // BA layo
 // Held distortion pins the principal point -- it sits behind it in the prefix.
 inline int camNumFreeParams(CamModel m, bool refine_pp = false, bool refine_extra = true) {
     const CamModelInfo& i = camInfo(m);
+    if (m == CamModel::KBPolarSpline)
+        return 2;
     if (!i.ba_refinable) return 0;
     if (!refine_extra) return i.ba_focal;
     return refine_pp ? i.ba_params : i.ba_params - i.ba_pp;
 }
 // Distortion coefficients this model carries, in the BA layout's middle block.
 inline int camNumExtraParams(CamModel m) {
+    if (m == CamModel::KBPolarSpline)
+        return 4;
     const CamModelInfo& i = camInfo(m);
     return i.ba_params - i.ba_focal - i.ba_pp;
 }
@@ -353,15 +376,8 @@ inline bool parseCamModelName(const std::string& s, CamModel& out) {
     return false;
 }
 
-// Camera fields <-> flat parameter array in the *BA* layout. `d` must have
-// camNumParams(c.model) slots. The single place that knows each model's BA
-// parameter order; sfm/map/Bundle.h packs/unpacks the solver's intrinsics with these.
-//
-// BA order is COLMAP's with the principal point moved to the end:
-//   focal length(s), extra parameters, cx, cy
-// so that holding the principal point fixed -- COLMAP's default, and ours --
-// is expressible as "the group owns the first n columns" (D50). packColmap
-// below is the translation back to COLMAP's own order for cameras.bin.
+// BA stores focal lengths first. KBPolarSpline appends its fixed spline payload
+// after the KB4 block; only its first two parameters can change.
 inline void packIntrinsics(const Camera& c, double* d) {
     switch (c.model) {
         case CamModel::SimplePinhole: d[0] = c.focal();
@@ -373,6 +389,18 @@ inline void packIntrinsics(const Camera& c, double* d) {
         case CamModel::OpenCV:        d[0] = c.fx; d[1] = c.fy;
                                       d[2] = c.k1; d[3] = c.k2; d[4] = c.p1; d[5] = c.p2;
                                       d[6] = c.cx; d[7] = c.cy; break;
+        case CamModel::KBPolarSpline:
+            d[0] = c.fx;
+            d[1] = c.fy;
+            d[2] = c.k1;
+            d[3] = c.k2;
+            d[4] = c.k3;
+            d[5] = c.k4;
+            d[6] = c.cx;
+            d[7] = c.cy;
+            for (int i = 0; i < 53; ++i)
+                d[8 + i] = c.polar[i];
+            break;
         case CamModel::OpenCVFisheye: d[0] = c.fx; d[1] = c.fy;
                                       d[2] = c.k1; d[3] = c.k2; d[4] = c.k3; d[5] = c.k4;
                                       d[6] = c.cx; d[7] = c.cy; break;
@@ -402,6 +430,18 @@ inline void unpackIntrinsics(Camera& c, const double* d) {  // c.model set by ca
         case CamModel::OpenCV:        c.fx = d[0]; c.fy = d[1];
                                       c.k1 = d[2]; c.k2 = d[3]; c.p1 = d[4]; c.p2 = d[5];
                                       c.cx = d[6]; c.cy = d[7]; break;
+        case CamModel::KBPolarSpline:
+            c.fx = d[0];
+            c.fy = d[1];
+            c.k1 = d[2];
+            c.k2 = d[3];
+            c.k3 = d[4];
+            c.k4 = d[5];
+            c.cx = d[6];
+            c.cy = d[7];
+            for (int i = 0; i < 53; ++i)
+                c.polar[i] = d[8 + i];
+            break;
         case CamModel::OpenCVFisheye: c.fx = d[0]; c.fy = d[1];
                                       c.k1 = d[2]; c.k2 = d[3]; c.k3 = d[4]; c.k4 = d[5];
                                       c.cx = d[6]; c.cy = d[7]; break;
@@ -425,7 +465,7 @@ inline void unpackIntrinsics(Camera& c, const double* d) {  // c.model set by ca
 inline void setExtraParams(Camera& c, const std::vector<double>& v) {
     const int n = camNumExtraParams(c.model);
     if (n <= 0) return;
-    double d[12];
+    double d[61];
     packIntrinsics(c, d);
     const int off = camInfo(c.model).ba_focal;
     for (int i = 0; i < n; i++) d[off + i] = i < (int)v.size() ? v[i] : 0.0;
@@ -442,6 +482,18 @@ inline void packColmap(const Camera& c, double* d) {
                                       d[3] = c.k1; d[4] = c.k2; break;
         case CamModel::OpenCV:        d[0] = c.fx; d[1] = c.fy; d[2] = c.cx; d[3] = c.cy;
                                       d[4] = c.k1; d[5] = c.k2; d[6] = c.p1; d[7] = c.p2; break;
+        case CamModel::KBPolarSpline:
+            d[0] = c.fx;
+            d[1] = c.fy;
+            d[2] = c.cx;
+            d[3] = c.cy;
+            d[4] = c.k1;
+            d[5] = c.k2;
+            d[6] = c.k3;
+            d[7] = c.k4;
+            for (int i = 0; i < 53; ++i)
+                d[8 + i] = c.polar[i];
+            break;
         case CamModel::OpenCVFisheye: d[0] = c.fx; d[1] = c.fy; d[2] = c.cx; d[3] = c.cy;
                                       d[4] = c.k1; d[5] = c.k2; d[6] = c.k3; d[7] = c.k4; break;
         case CamModel::FullOpenCV:    d[0] = c.fx; d[1] = c.fy; d[2] = c.cx; d[3] = c.cy;
@@ -465,6 +517,18 @@ inline void unpackColmap(Camera& c, const double* d) {
                                       c.k1 = d[3]; c.k2 = d[4]; break;
         case CamModel::OpenCV:        c.fx = d[0]; c.fy = d[1]; c.cx = d[2]; c.cy = d[3];
                                       c.k1 = d[4]; c.k2 = d[5]; c.p1 = d[6]; c.p2 = d[7]; break;
+        case CamModel::KBPolarSpline:
+            c.fx = d[0];
+            c.fy = d[1];
+            c.cx = d[2];
+            c.cy = d[3];
+            c.k1 = d[4];
+            c.k2 = d[5];
+            c.k3 = d[6];
+            c.k4 = d[7];
+            for (int i = 0; i < 53; ++i)
+                c.polar[i] = d[8 + i];
+            break;
         case CamModel::OpenCVFisheye: c.fx = d[0]; c.fy = d[1]; c.cx = d[2]; c.cy = d[3];
                                       c.k1 = d[4]; c.k2 = d[5]; c.k3 = d[6]; c.k4 = d[7]; break;
         case CamModel::FullOpenCV:    c.fx = d[0]; c.fy = d[1]; c.cx = d[2]; c.cy = d[3];

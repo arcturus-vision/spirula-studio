@@ -113,7 +113,7 @@ bool extract_arcturus(const PrepJob &job, const PrepInput &input, const std::str
     log(amsg::calibrated.get());
     const fs::path marker = fs::path(images) / ".arcturus-poses.txt";
     std::ostringstream identity;
-    identity << "AV1-native-v2 " << fs::file_size(input.path) << ' '
+    identity << "AV1-native-v3 " << fs::file_size(input.path) << ' '
              << (long long)fs::last_write_time(input.path).time_since_epoch().count() << ' '
              << count;
     std::ifstream prior(marker);
@@ -254,6 +254,10 @@ bool extract_arcturus(const PrepJob &job, const PrepInput &input, const std::str
                 c.params[2] *= (double)w / c.width;
                 c.params[1] *= (double)h / c.height;
                 c.params[3] *= (double)h / c.height;
+                if (c.model == "kb-polar-spline") {
+                    c.params[9] *= (double)w / c.width;
+                    c.params[10] *= (double)h / c.height;
+                }
                 c.width = w;
                 c.height = h;
             }
