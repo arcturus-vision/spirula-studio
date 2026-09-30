@@ -23,6 +23,7 @@ namespace {
     X("use_found_masks",            use_found_masks)                          \
     X("flip_found_masks",           sfm.prep.flip_found_masks)                \
     X("video_fps",                  sfm.prep.video_fps)                       \
+    X("arcturus_keyframes",          sfm.prep.arcturus_keyframes)               \
     X("adaptive_fps",               sfm.prep.adaptive_fps)                    \
     X("adaptive_range",             sfm.prep.adaptive_range)                  \
     X("sharp_window",               sfm.prep.sharp_window)                    \

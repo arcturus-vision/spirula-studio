@@ -84,7 +84,7 @@ bool extract_arcturus(const PrepJob &job, const PrepInput &input, const std::str
     if (job.max_frames > 0)
         count = std::min(count, job.max_frames);
     count = std::min(count, (int)capture.frames.size());
-    auto selected = sfm::select_arcturus_frames(capture, count);
+    std::vector<sfm::ArcturusFrame> selected;
     std::vector<double> intervals;
     for (size_t i = 1; i < capture.frames.size(); ++i) {
         double dt = capture.frames[i].time - capture.frames[i - 1].time;
@@ -93,6 +93,33 @@ bool extract_arcturus(const PrepJob &job, const PrepInput &input, const std::str
     }
     std::sort(intervals.begin(), intervals.end());
     const double half_frame = intervals[intervals.size() / 2] * .5;
+    if (job.arcturus_keyframes) {
+        log(amsg::keyframe_scan.get());
+        std::array<std::vector<double>, 2> times;
+        for (int eye = 0; eye < 2; ++eye) {
+            int rc = run_process(
+                {job.ffmpeg_exe, "-nostdin", "-hide_banner", "-copyts", "-skip_frame", "nokey",
+                 "-noautorotate", "-i", input.path, "-map", "0:v:" + std::to_string(eye), "-vf",
+                 "showinfo", "-fps_mode", "passthrough", "-an", "-f", "null", "-"},
+                "",
+                [&](const std::string &line) {
+                    auto at = line.find("pts_time:");
+                    if (at != std::string::npos && line.find("iskey:1") != std::string::npos)
+                        times[eye].push_back(std::strtod(line.c_str() + at + 9, nullptr));
+                },
+                cancel);
+            if (cancel.load())
+                throw std::runtime_error(amsg::err_arcturus_import_cancelled.get());
+            if (rc != 0)
+                throw std::runtime_error(amsg::keyframe_scan_failed.get());
+        }
+        selected = sfm::select_arcturus_keyframes(capture, times, job.max_frames, half_frame);
+        count = (int)selected.size();
+        log(spirula::i18n::format(amsg::keyframe_selected,
+                                  {count, (int)times[0].size(), (int)times[1].size()}));
+    } else {
+        selected = sfm::select_arcturus_frames(capture, count);
+    }
     auto rotations = sfm::video_display_rotations(input.path);
     if (rotations.size() != 2)
         throw std::runtime_error(amsg::err_arcturus_recording_must_have_exactly_two_video.get());
@@ -113,9 +140,9 @@ bool extract_arcturus(const PrepJob &job, const PrepInput &input, const std::str
     log(amsg::calibrated.get());
     const fs::path marker = fs::path(images) / ".arcturus-poses.txt";
     std::ostringstream identity;
-    identity << "AV1-native-v3 " << fs::file_size(input.path) << ' '
+    identity << "AV1-native-v4 " << fs::file_size(input.path) << ' '
              << (long long)fs::last_write_time(input.path).time_since_epoch().count() << ' '
-             << count;
+             << count << ' ' << (job.arcturus_keyframes ? "keyframes" : "uniform");
     std::ifstream prior(marker);
     std::string old;
     std::getline(prior, old);
@@ -197,7 +224,8 @@ bool extract_arcturus(const PrepJob &job, const PrepInput &input, const std::str
                                              "-frames:v",
                                              "1",
                                              "-vf",
-                                             "showinfo",
+                                             job.arcturus_keyframes ? "select=eq(key\\,1),showinfo"
+                                                                    : "showinfo",
                                              "-pix_fmt",
                                              "rgb24",
                                              "-compression_level",
@@ -207,8 +235,10 @@ bool extract_arcturus(const PrepJob &job, const PrepInput &input, const std::str
                 args.insert(args.begin() + 1, {"-hwaccel", "videotoolbox"});
             decoded_times[eye] = std::numeric_limits<double>::quiet_NaN();
             std::string decoder_output;
+            bool decoded_keyframe = false;
             auto decode = [&]() {
                 decoded_times[eye] = std::numeric_limits<double>::quiet_NaN();
+                decoded_keyframe = false;
                 return run_process(
                     args, "",
                     [&](const std::string &line) {
@@ -216,8 +246,10 @@ bool extract_arcturus(const PrepJob &job, const PrepInput &input, const std::str
                         if (decoder_output.size() > 8192)
                             decoder_output.erase(0, decoder_output.size() - 8192);
                         auto at = line.find("pts_time:");
-                        if (at != std::string::npos && !std::isfinite(decoded_times[eye]))
+                        if (at != std::string::npos && !std::isfinite(decoded_times[eye])) {
                             decoded_times[eye] = std::strtod(line.c_str() + at + 9, nullptr);
+                            decoded_keyframe = line.find("iskey:1") != std::string::npos;
+                        }
                     },
                     cancel);
             };
@@ -234,6 +266,9 @@ bool extract_arcturus(const PrepJob &job, const PrepInput &input, const std::str
             }
             if (!std::isfinite(decoded_times[eye]) || std::abs(decoded_times[eye] - f.time) > .075)
                 throw std::runtime_error(amsg::err_arcturus_video_frame_is_missing_near_its.get());
+            if (job.arcturus_keyframes &&
+                (!decoded_keyframe || std::abs(decoded_times[eye] - f.time) > .002))
+                throw std::runtime_error(amsg::keyframe_decode.get());
             int w = 0, h = 0, n = 0;
             std::ifstream png(tmp, std::ios::binary | std::ios::ate);
             const auto size = png.tellg();

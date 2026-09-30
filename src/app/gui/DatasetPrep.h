@@ -253,6 +253,7 @@ struct PrepJob {
     // Kept frames per second, 0 = every frame; PrepInput::fps overrides it
     // per video.
     float video_fps = 2.0f;
+    bool arcturus_keyframes = false;
     // Space them by view change rather than by time (app/FrameMotion.h): the
     // rate above becomes the average and stays within `adaptive_range` of it.
     bool  adaptive_fps = false;
@@ -576,6 +577,7 @@ struct WorkspaceState {
     // the transforms.json, root-level COLMAP files or Metashape export of a
     // dataset that arrived finished. A run pointed at one ADDS to it.
     bool model = false;
+    bool arcturus_alignment_pending = false;
     bool geometry = false;  // normals/ or depths/, which a run adds to
     // The folder says what built it (DatasetRecord.h).
     bool record = false;

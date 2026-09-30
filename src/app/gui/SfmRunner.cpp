@@ -882,9 +882,7 @@ void SfmRunner::run(SfmJob job) {
         say(Step::Model);
         const bool arcturus = has_arcturus_manifest(prep.image_dir);
         const auto aligned_marker = ws / ".arcturus-aligned";
-        const bool reuse_model = !makes(plan[Step::Model].act) &&
-            (!arcturus || (fs::exists(aligned_marker) &&
-                           fs::exists(ws / "scene.xrSceneTransform.json")));
+        const bool reuse_model = !makes(plan[Step::Model].act);
         if (!reuse_model) {
             if (arcturus) fs::remove(aligned_marker);
             const std::vector<std::string> now = recon_args(job, prep);

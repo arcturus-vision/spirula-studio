@@ -251,6 +251,7 @@ void ColmapRunner::take_reconstruction(ColmapJob& job) {
     const bool resume = job.resume;
     const float fps = job.video_fps;
     const bool adaptive = job.adaptive_fps;
+    const bool keyframes = job.arcturus_keyframes;
     const float range = job.adaptive_range;
     const int sharp = job.sharp_window, maxf = job.max_frames;
     job = _live;
@@ -259,6 +260,7 @@ void ColmapRunner::take_reconstruction(ColmapJob& job) {
     job.resume = resume;
     job.video_fps = fps;
     job.adaptive_fps = adaptive;
+    job.arcturus_keyframes = keyframes;
     job.adaptive_range = range;
     job.sharp_window = sharp;
     job.max_frames = maxf;
@@ -437,6 +439,7 @@ PrepJob ColmapRunner::prep_job(const ColmapJob& job) {
     // routing is untouched.
     pj.device = job.device;
     pj.video_fps = job.video_fps;
+    pj.arcturus_keyframes = job.arcturus_keyframes;
     pj.adaptive_fps = job.adaptive_fps;
     pj.adaptive_range = job.adaptive_range;
     pj.sharp_window = job.sharp_window;
