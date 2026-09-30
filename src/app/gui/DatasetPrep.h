@@ -248,6 +248,7 @@ struct PrepJob {
     // Kept frames per second, 0 = every frame; PrepInput::fps overrides it
     // per video.
     float video_fps = 2.0f;
+    bool arcturus_keyframes = false;
     // Space them by view change rather than by time (app/FrameMotion.h): the
     // rate above becomes the average and stays within `adaptive_range` of it.
     bool  adaptive_fps = false;
@@ -415,18 +416,30 @@ inline ReconStamp frames_stamp(const PrepJob& job) {
     ReconStamp st;
     st.present = true;
     st.engine = job.force_external_decode ? "ffmpeg" : "builtin";
-    st.args = {"--fps",         num(job.video_fps),
-               "--adaptive",    job.adaptive_fps ? "1" : "0",
-               "--range",       num(job.adaptive_range),
-               "--sharp",       num(job.sharp_window),
-               "--sync",        job.sync_tracks ? "1" : "0",
-               "--max-frames",  num(job.max_frames),
-               "--rotate",      job.auto_rotate ? "1" : "0",
-               "--photos",      num((int)job.photo_import),
-               "--360",         num((int)job.pano.mode),
-               "--360-size",    num(job.pano.size),
-               "--360-orient",  num(job.pano.yaw) + "," + num(job.pano.pitch) +
-                                    "," + num(job.pano.roll)};
+    st.args = {"--fps",
+               num(job.video_fps),
+               "--arcturus-keyframes",
+               job.arcturus_keyframes ? "1" : "0",
+               "--adaptive",
+               job.adaptive_fps ? "1" : "0",
+               "--range",
+               num(job.adaptive_range),
+               "--sharp",
+               num(job.sharp_window),
+               "--sync",
+               job.sync_tracks ? "1" : "0",
+               "--max-frames",
+               num(job.max_frames),
+               "--rotate",
+               job.auto_rotate ? "1" : "0",
+               "--photos",
+               num((int)job.photo_import),
+               "--360",
+               num((int)job.pano.mode),
+               "--360-size",
+               num(job.pano.size),
+               "--360-orient",
+               num(job.pano.yaw) + "," + num(job.pano.pitch) + "," + num(job.pano.roll)};
     for (const PrepInput& in : job.inputs) {
         st.args.push_back("--input");
         st.args.push_back(in.path);

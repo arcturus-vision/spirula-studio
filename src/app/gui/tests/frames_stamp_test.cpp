@@ -52,6 +52,7 @@ int main() {
     });
     moves("orientation", [](gui::PrepJob& j) { j.pano.roll = 180.0f; });
     moves("rate", [](gui::PrepJob& j) { j.video_fps = 4.0f; });
+    moves("recorded keyframes", [](gui::PrepJob &j) { j.arcturus_keyframes = true; });
     moves("per-video rate", [](gui::PrepJob& j) { j.inputs[1].fps = 6.0f; });
     moves("adaptive switch", [](gui::PrepJob& j) { j.adaptive_fps = true; });
     moves("sharpness window", [](gui::PrepJob& j) { j.sharp_window = 5; });

@@ -4,6 +4,15 @@ namespace spirula {
 namespace i18n {
 namespace msg {
 namespace arcturus {
+SS_MSG_EN(keyframes, "Use recorded keyframes (Arcturus Vision Camera)");
+SS_MSG_EN(keyframes_help, "Keep paired I-keyframes from calibrated camera recordings. Ignores FPS, adaptive spacing and sharpness selection; the maximum frame count still applies. Ordinary videos keep their usual sampling.");
+SS_MSG_EN(keyframe_scan, "Finding recorded stereo keyframes...");
+SS_MSG_EN(keyframe_selected, "Selected {0} stereo keyframe pairs (left: {1}, right: {2})");
+SS_MSG_EN(keyframe_scan_failed, "Could not read video keyframes with FFmpeg");
+SS_MSG_EN(keyframe_times, "Keyframe timestamps are invalid or not increasing");
+SS_MSG_EN(keyframe_pose, "A stereo keyframe has no matching tracking pose");
+SS_MSG_EN(keyframe_count, "At least three paired keyframes are required; check the recording and maximum frame count");
+SS_MSG_EN(keyframe_decode, "Decoded image is not the requested keyframe");
 SS_MSG_EN(polar_grid, "Unsupported KBPolarSpline grid; expected 5 by 5");
 SS_MSG_EN(polar_scale, "Invalid KBPolarSpline scale");
 SS_MSG_EN(polar_coefficients, "Invalid KBPolarSpline coefficient count");

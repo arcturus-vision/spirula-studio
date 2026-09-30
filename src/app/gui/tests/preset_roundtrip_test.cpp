@@ -59,6 +59,7 @@ static void test_dataset_preset() {
     s.sfm.prep.photo_import = gui::PhotoImport::Move;
     s.sfm.prep.flip_found_masks = true;
     s.sfm.prep.video_fps = 5.5f;
+    s.sfm.prep.arcturus_keyframes = true;
     s.sfm.prep.adaptive_fps = true;
     s.sfm.prep.adaptive_range = 2.5f;
     s.sfm.prep.sharp_window = 7;
@@ -175,6 +176,7 @@ static void test_dataset_preset() {
     CHECK(b.sfm.prep.photo_import == s.sfm.prep.photo_import);
     CHECK_EQ(b.sfm.prep.flip_found_masks, s.sfm.prep.flip_found_masks);
     CHECK_EQ(b.sfm.prep.video_fps, s.sfm.prep.video_fps);
+    CHECK_EQ(b.sfm.prep.arcturus_keyframes, s.sfm.prep.arcturus_keyframes);
     CHECK_EQ(b.sfm.prep.adaptive_fps, s.sfm.prep.adaptive_fps);
     CHECK_EQ(b.sfm.prep.adaptive_range, s.sfm.prep.adaptive_range);
     CHECK_EQ(b.sfm.prep.sharp_window, s.sfm.prep.sharp_window);

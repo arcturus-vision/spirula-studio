@@ -2,13 +2,14 @@
 #include <filesystem>
 #include <iostream>
 int main(int argc, char **argv) {
-    if (argc < 3 || argc > 4)
+    if (argc < 3 || argc > 5)
         return 2;
     try {
         gui::PrepJob job;
         job.workspace = argv[2];
         job.ffmpeg_exe = "ffmpeg";
-        job.max_frames = argc == 4 ? std::stoi(argv[3]) : 3;
+        job.max_frames = argc >= 4 ? std::stoi(argv[3]) : 3;
+        job.arcturus_keyframes = argc == 5 && std::string(argv[4]) == "--keyframes";
         gui::PrepInput input;
         input.path = argv[1];
         input.is_video = true;
