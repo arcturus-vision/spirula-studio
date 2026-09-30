@@ -437,6 +437,7 @@ bool apply_legacy_frames(const std::vector<std::string>& a, const PrepJob& now,
         }
         const std::string& v = a[++k];
         if (flag == "--fps") j.video_fps = to_float(v);
+        else if (flag == "--arcturus-keyframes") j.arcturus_keyframes = v == "1";
         else if (flag == "--adaptive") j.adaptive_fps = v == "1";
         else if (flag == "--range") j.adaptive_range = to_float(v);
         else if (flag == "--sharp") j.sharp_window = (int)to_float(v);
@@ -694,6 +695,7 @@ StepFields frames_fields(const PrepJob& job) {
     add(f, "decoder", "", job.force_external_decode ? "ffmpeg" : "auto");
     add(f, "frame_indices", "", kStreamingFrameExtraction ? "source" : "candidates");
     add(f, "max_frames", "", num(job.max_frames));
+    if (job.arcturus_keyframes) add(f, "arcturus_keyframes", "", onoff(true));
     add(f, "auto_rotate", "", onoff(job.auto_rotate));
     if (rate) {
         add(f, "sharp_window", "", num(job.sharp_window));
@@ -1086,6 +1088,8 @@ DatasetPlan plan_dataset(const PlanJob& job, const WorkspaceState& ws,
         // with this; frames made where there were none never were.
         set(md, Act::Redo, Why::Frames);
         md.ask = fr.ask || (fr.act == Act::Run && !req.redo_frames);
+    } else if (ws.arcturus_alignment_pending) {
+        set(md, Act::Run, Why::Resume);
     } else if (!rr.present) {
         set(md, Act::Reuse, Why::Unrecorded);
         md.masks_changed = masks_feed && makes(mk.act);

@@ -9,13 +9,22 @@ supported calibration and tracking. When reconstruction succeeds, use
 
 The importer reads the recording's `gpmd` AVmf/AVmd `json/v1` metadata in C++.
 It retains both video tracks, separate calibrated intrinsics, each timestamp's stereo
-extrinsics, and tracking poses. The frame-rate field controls uniform sampling
+extrinsics, and tracking poses. By default, the frame-rate field controls uniform sampling
 across the complete recording (at most 500 stereo instants). Lens guesses,
 sharpness selection and adaptive frame selection do not override that sampling.
 One recording is supported per dataset; separate recordings may have unrelated
 tracking origins. The importer prefers `kb_polar_spline` when present and falls
 back to `kb` / `kb4`. A malformed polar calibration is rejected rather than
 silently replaced with an approximate model.
+
+Enable **Use recorded keyframes (Arcturus Vision Camera)** in video extraction
+settings to retain the recording's paired I-keyframes instead. This is useful
+for recordings that encode higher-quality keyframes. FPS, sharpness and adaptive
+spacing do not affect this mode. All paired keyframes are retained unless the
+maximum frame count is set; that limit selects a distributed subset of keyframes
+across the recording. At least three stereo instants with matching tracking
+poses are required. The importer verifies that both decoded images are keyframes
+at the requested timestamp. Ordinary videos keep their usual sampling behavior.
 
 FFmpeg is required for video decoding and can be selected in Tool locations.
 No Python, COLMAP executable, or external reconstruction pipeline is used.
@@ -41,14 +50,15 @@ It does not translate the scene to the origin or alter its scale. Changing the
 training scene center or relative scale prevents copying the unchanged sidecar.
 
 Frame reuse requires a completed native import marker matching source size,
-modification time, import version and sampling count. Interrupted extraction is
+modification time, import version, sampling mode and sampling count. Interrupted extraction is
 retained; restarting replaces its generated frames. Use a fresh dataset folder
 for independent experiments. Reconstruction reuse also requires a successful
 `.arcturus-aligned` marker and matching reconstruction settings. A new attempt
 invalidates that marker until alignment succeeds. The original MP4 is never changed.
 
 Native checks: `sfm_arcturus_test`, `sfm_telemetry_test`, and
-`arcturus_import_test RECORDING OUTPUT [MAX_STEREO_INSTANTS]`.
+`arcturus_import_test RECORDING OUTPUT [MAX_STEREO_INSTANTS] [--keyframes]`.
+Use `0 --keyframes` to validate every paired keyframe.
 The last executable drives the same extraction code as the GUI, with real FFmpeg
 decoding. It is a developer validation tool, not required by the application.
 

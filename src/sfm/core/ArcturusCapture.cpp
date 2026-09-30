@@ -4,6 +4,7 @@
 #include "sfm/core/Telemetry.h"
 #include <algorithm>
 #include <cmath>
+#include <limits>
 #include <stdexcept>
 
 namespace sfm {
@@ -201,6 +202,48 @@ std::vector<ArcturusFrame> select_arcturus_frames(const ArcturusCapture &capture
     }
     return selected;
 }
+std::vector<ArcturusFrame>
+select_arcturus_keyframes(const ArcturusCapture &capture,
+                          const std::array<std::vector<double>, 2> &times, int max_count,
+                          double pose_tolerance) {
+    for (const auto &eye : times)
+        for (size_t i = 0; i < eye.size(); ++i)
+            if (!std::isfinite(eye[i]) || (i && eye[i] <= eye[i - 1]))
+                throw std::runtime_error(amsg::keyframe_times.get());
+    std::vector<ArcturusFrame> paired;
+    size_t right = 0;
+    double last_pose = -std::numeric_limits<double>::infinity();
+    for (double left : times[0]) {
+        while (right < times[1].size() && times[1][right] < left - .001)
+            ++right;
+        if (right == times[1].size() || std::abs(times[1][right] - left) > .001)
+            continue;
+        const double time = (left + times[1][right++]) * .5;
+        const auto &frames = capture.frames;
+        if (frames.empty())
+            throw std::runtime_error(amsg::keyframe_pose.get());
+        auto it = std::lower_bound(frames.begin(), frames.end(), time,
+                                   [](const auto &f, double t) { return f.time < t; });
+        if (it == frames.end())
+            --it;
+        if (it != frames.begin() && time - (it - 1)->time <= it->time - time)
+            --it;
+        if (std::abs(it->time - time) > pose_tolerance || it->time <= last_pose)
+            throw std::runtime_error(amsg::keyframe_pose.get());
+        last_pose = it->time;
+        paired.push_back(*it);
+        paired.back().time = time;
+    }
+    const int count = max_count > 0 ? std::min(max_count, (int)paired.size()) : (int)paired.size();
+    if (count < 3)
+        throw std::runtime_error(amsg::keyframe_count.get());
+    std::vector<ArcturusFrame> selected;
+    for (int i = 0; i < count; ++i)
+        selected.push_back(
+            paired[(size_t)std::llround((double)i * (paired.size() - 1) / (count - 1))]);
+    return selected;
+}
+
 Manifest arcturus_manifest(const ArcturusCapture &capture, const std::string &prefix) {
     Manifest m;
     m.camera_mode = "folder";

@@ -209,6 +209,28 @@ int main(int argc, char **argv) {
             rejected = true;
         }
         require(rejected, "oversampling rejection");
+        std::array<std::vector<double>, 2> keys{{{0., .2, .5, .9}, {0., .200001, .4, .5, .9}}};
+        auto key_picked = sfm::select_arcturus_keyframes(synthetic, keys, 0, .05);
+        require(key_picked.size() == 4 && key_picked[2].time == .5,
+                "paired keyframes ignore unmatched eye frames");
+        key_picked = sfm::select_arcturus_keyframes(synthetic, keys, 3, .05);
+        require(key_picked.size() == 3 && key_picked.front().time == 0 &&
+                    key_picked.back().time == .9,
+                "keyframe limit covers the recording");
+        rejected = false;
+        try {
+            sfm::select_arcturus_keyframes(synthetic, {{{0., .3}, {0., .3}}}, 0, .05);
+        } catch (...) {
+            rejected = true;
+        }
+        require(rejected, "too few paired keyframes rejected");
+        rejected = false;
+        try {
+            sfm::select_arcturus_keyframes(synthetic, {{{0., .25, .9}, {0., .25, .9}}}, 0, .01);
+        } catch (...) {
+            rejected = true;
+        }
+        require(rejected, "keyframe without nearby tracking rejected");
         for (double pitch : {0., .4, 1.5707963267948966, -1.5707963267948966}) {
             for (double display : {0., 90., 180., -90.}) {
                 sfm::Pose camera{sfm::angleAxisToRotation({pitch, 0, 0}), {1, 2, 3}};

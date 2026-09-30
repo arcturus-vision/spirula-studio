@@ -1051,6 +1051,14 @@ WorkspaceState probe_workspace(const std::string& workspace,
                colmap_model_here(ws) || metashape_export_here(ws);
     st.geometry = has_content(ws / "normals") || has_content(ws / "depths");
     st.dense = spirula::dense::artifact_complete(ws.string(), true);
+    bool arcturus = fs::exists(ws / "images" / ".arcturus-manifest.json", ec);
+    for (const PrepInput& in : inputs)
+        arcturus = arcturus ||
+            fs::exists(ws / "images" / in.subdir / ".arcturus-manifest.json", ec) ||
+            (!in.is_video && fs::exists(fs::path(in.path) / ".arcturus-manifest.json", ec));
+    st.arcturus_alignment_pending = arcturus &&
+        (!fs::exists(ws / ".arcturus-aligned", ec) ||
+         !fs::exists(ws / "scene.xrSceneTransform.json", ec));
     st.record = fs::exists(ws / kDatasetRecordFile, ec);
     const fs::path resume = ws / sfm::resume::kDir;
     st.extracted = has_content(ws / "features") &&

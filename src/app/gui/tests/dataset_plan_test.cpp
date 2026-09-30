@@ -176,6 +176,9 @@ int main() {
         c.prep.inputs[0].clip_end = 40.0;
         expect(!(frames_fields(b.prep) == frames_fields(c.prep)),
                "... and so is where it ends");
+        b.prep.arcturus_keyframes = true;
+        expect(!(frames_fields(a.prep) == frames_fields(b.prep)),
+               "recorded keyframe selection is part of the frames");
         b = made;
         b.prep.mask_prompt = "person; car";
         expect(frames_fields(a.prep) == frames_fields(b.prep),
@@ -496,6 +499,21 @@ int main() {
         expect(p[Step::Model].act == Act::Redo && !p[Step::Model].changes.empty() &&
                    p[Step::Model].changes[0].key == "lens",
                "a lens change rebuilds, and says which folder");
+    }
+
+    {
+        touch(ws / "images" / ".arcturus-manifest.json");
+        DatasetPlan p = plan(made);
+        expect(p[Step::Model].act == Act::Run && p[Step::Model].why == Why::Resume,
+               "an unfinished tracking alignment resumes the model step");
+        touch(ws / ".arcturus-aligned");
+        touch(ws / "scene.xrSceneTransform.json");
+        p = plan(made);
+        expect(p[Step::Model].act == Act::Reuse,
+               "a completed tracking alignment reuses the model");
+        fs::remove(ws / "images" / ".arcturus-manifest.json");
+        fs::remove(ws / ".arcturus-aligned");
+        fs::remove(ws / "scene.xrSceneTransform.json");
     }
 
     // ---- what the record restores ------------------------------------------

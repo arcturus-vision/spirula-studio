@@ -744,6 +744,7 @@ void GuiApp::write_run_settings(std::ofstream& f) {
     line("subprocess", cfg_str(j.subprocess));
     line("force_external_decode", cfg_str(j.prep.force_external_decode));
     line("video_fps", cfg_str(j.prep.video_fps));
+    line("arcturus_keyframes", cfg_str(j.prep.arcturus_keyframes));
     line("adaptive_fps", cfg_str(j.prep.adaptive_fps));
     if (j.prep.adaptive_fps) line("adaptive_range", cfg_str(j.prep.adaptive_range));
     for (const PrepInput& s : _sources)
@@ -4289,6 +4290,7 @@ void GuiApp::sync_dataset_jobs() {
     _colmap_job.device = _native_device_uuid;
     _colmap_job.inference_devices = prep.inference_devices;
     _colmap_job.video_fps = prep.video_fps;
+    _colmap_job.arcturus_keyframes = prep.arcturus_keyframes;
     _colmap_job.adaptive_fps = prep.adaptive_fps;
     _colmap_job.adaptive_range = prep.adaptive_range;
     _colmap_job.sharp_window = prep.sharp_window;
@@ -5241,6 +5243,8 @@ void GuiApp::draw_dataset_basics() {
         // The rate itself is a column of the input list, beside the video it
         // describes; what is left here is what it means for all of them.
         ImGui::BeginDisabled(dataset_locked(Stage::Frames));
+        ui::Checkbox(spirula::i18n::msg::arcturus::keyframes, &_sfm_job.prep.arcturus_keyframes);
+        ui::help_on_hover(spirula::i18n::msg::arcturus::keyframes_help);
         ui::Checkbox(dmsg::adaptive_fps, &_sfm_job.prep.adaptive_fps);
         ui::help_on_hover(dmsg::adaptive_fps_help);
         if (_sfm_job.prep.adaptive_fps &&
