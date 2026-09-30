@@ -6,8 +6,8 @@
 
 template void rasterize_to_pixels_eval3d_fwd_kernel_wrapper<
     Vanilla3DGUT<0>,
-    CameraModelType::EQUISOLID,
-    CameraDistortionType::OpenCV,
+    CameraModelType::FISHEYE,
+    CameraDistortionType::KBPolarSpline,
     DistortionType::D,
     false,
     true
@@ -41,8 +41,8 @@ template void rasterize_to_pixels_eval3d_fwd_kernel_wrapper<
 
 template void rasterize_to_pixels_eval3d_fwd_kernel_wrapper<
     Vanilla3DGUT<0>,
-    CameraModelType::EQUISOLID,
-    CameraDistortionType::OpenCV,
+    CameraModelType::FISHEYE,
+    CameraDistortionType::KBPolarSpline,
     DistortionType::D,
     false,
     false
@@ -76,8 +76,8 @@ template void rasterize_to_pixels_eval3d_fwd_kernel_wrapper<
 
 template void rasterize_to_pixels_eval3d_fwd_kernel_wrapper<
     Vanilla3DGUT<0>,
-    CameraModelType::EQUISOLID,
-    CameraDistortionType::OpenCV,
+    CameraModelType::FISHEYE,
+    CameraDistortionType::KBPolarSpline,
     DistortionType::RGB_D,
     true,
     true
@@ -111,8 +111,8 @@ template void rasterize_to_pixels_eval3d_fwd_kernel_wrapper<
 
 template void rasterize_to_pixels_eval3d_fwd_kernel_wrapper<
     Vanilla3DGUT<0>,
-    CameraModelType::EQUISOLID,
-    CameraDistortionType::OpenCV,
+    CameraModelType::FISHEYE,
+    CameraDistortionType::KBPolarSpline,
     DistortionType::RGB_D,
     true,
     false
@@ -146,8 +146,8 @@ template void rasterize_to_pixels_eval3d_fwd_kernel_wrapper<
 
 template void rasterize_to_pixels_eval3d_fwd_kernel_wrapper<
     Vanilla3DGUT<0>,
-    CameraModelType::EQUISOLID,
-    CameraDistortionType::OpenCV,
+    CameraModelType::FISHEYE,
+    CameraDistortionType::KBPolarSpline,
     DistortionType::RGB_D,
     false,
     true
@@ -181,8 +181,8 @@ template void rasterize_to_pixels_eval3d_fwd_kernel_wrapper<
 
 template void rasterize_to_pixels_eval3d_fwd_kernel_wrapper<
     Vanilla3DGUT<0>,
-    CameraModelType::EQUISOLID,
-    CameraDistortionType::OpenCV,
+    CameraModelType::FISHEYE,
+    CameraDistortionType::KBPolarSpline,
     DistortionType::RGB_D,
     false,
     false
@@ -217,7 +217,7 @@ template void rasterize_to_pixels_eval3d_fwd_kernel_wrapper<
 template void rasterize_to_pixels_eval3d_fwd_kernel_wrapper<
     Vanilla3DGUT<0>,
     CameraModelType::EQUISOLID,
-    CameraDistortionType::ThinPrism,
+    CameraDistortionType::None,
     DistortionType::None,
     true,
     true
@@ -252,7 +252,7 @@ template void rasterize_to_pixels_eval3d_fwd_kernel_wrapper<
 template void rasterize_to_pixels_eval3d_fwd_kernel_wrapper<
     Vanilla3DGUT<0>,
     CameraModelType::EQUISOLID,
-    CameraDistortionType::ThinPrism,
+    CameraDistortionType::None,
     DistortionType::None,
     true,
     false
@@ -287,7 +287,7 @@ template void rasterize_to_pixels_eval3d_fwd_kernel_wrapper<
 template void rasterize_to_pixels_eval3d_fwd_kernel_wrapper<
     Vanilla3DGUT<0>,
     CameraModelType::EQUISOLID,
-    CameraDistortionType::ThinPrism,
+    CameraDistortionType::None,
     DistortionType::None,
     false,
     true

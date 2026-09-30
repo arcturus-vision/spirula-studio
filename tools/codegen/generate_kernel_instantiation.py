@@ -19,12 +19,15 @@ kCameraVariants = [
     ("CameraModelType::PINHOLE",         "CameraDistortionType::None"),
     ("CameraModelType::PINHOLE",         "CameraDistortionType::OpenCV"),
     ("CameraModelType::PINHOLE",         "CameraDistortionType::ThinPrism"),
+    ("CameraModelType::PINHOLE",         "CameraDistortionType::KBPolarSpline"),
     ("CameraModelType::FISHEYE",         "CameraDistortionType::None"),
     ("CameraModelType::FISHEYE",         "CameraDistortionType::OpenCV"),
     ("CameraModelType::FISHEYE",         "CameraDistortionType::ThinPrism"),
+    ("CameraModelType::FISHEYE",         "CameraDistortionType::KBPolarSpline"),
     ("CameraModelType::EQUISOLID",       "CameraDistortionType::None"),
     ("CameraModelType::EQUISOLID",       "CameraDistortionType::OpenCV"),
     ("CameraModelType::EQUISOLID",       "CameraDistortionType::ThinPrism"),
+    ("CameraModelType::EQUISOLID",       "CameraDistortionType::KBPolarSpline"),
     ("CameraModelType::EQUIRECTANGULAR", "CameraDistortionType::None"),
 ]
 
@@ -70,10 +73,10 @@ _emitted: set = set()
 def write_if_changed(path, new_text):
     old = None
     if os.path.exists(path):
-        with open(path, "r") as f:
+        with open(path, "r", newline="") as f:
             old = f.read()
     if old != new_text:
-        with open(path, "w") as f:
+        with open(path, "w", newline="\n") as f:
             f.write(new_text)
         return True
     return False

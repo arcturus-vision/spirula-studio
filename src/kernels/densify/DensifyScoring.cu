@@ -34,11 +34,13 @@ template<> struct CovProjNav<CameraModelType::MODEL, CameraDistortionType::TIER>
 #define _SS_COV_RADIAL_TIERS(MODEL, PREFIX)          \
     _SS_COV_RADIAL(MODEL, PREFIX, None,      _none)  \
     _SS_COV_RADIAL(MODEL, PREFIX, OpenCV,    _opencv)\
-    _SS_COV_RADIAL(MODEL, PREFIX, ThinPrism, _prism)
+    _SS_COV_RADIAL(MODEL, PREFIX, ThinPrism, _prism) \
+    _SS_COV_RADIAL(MODEL, PREFIX, KBPolarSpline, _polar)
 
 _SS_COV_PERSP(None,      _none)
 _SS_COV_PERSP(OpenCV,    _opencv)
 _SS_COV_PERSP(ThinPrism, _prism)
+_SS_COV_PERSP(KBPolarSpline, _polar)
 _SS_COV_RADIAL_TIERS(FISHEYE,   fisheye)
 _SS_COV_RADIAL_TIERS(EQUISOLID, equisolid)
 _SS_COV_PROJ(EQUIRECTANGULAR, None,

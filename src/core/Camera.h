@@ -51,6 +51,8 @@ inline const char* camera_distortion_to_string(CameraDistortionType d) {
         case CameraDistortionType::None:      return "NONE";
         case CameraDistortionType::OpenCV:    return "OPENCV";
         case CameraDistortionType::ThinPrism: return "THIN_PRISM";
+        case CameraDistortionType::KBPolarSpline:
+            return "KB_POLAR_SPLINE";
         default:                              return "UNKNOWN";
     }
 }

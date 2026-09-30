@@ -6,8 +6,8 @@
 
 template void rasterize_to_pixels_eval3d_bwd_kernel_wrapper<
     Vanilla3DGUT<0>,
-    CameraModelType::EQUISOLID,
-    CameraDistortionType::OpenCV,
+    CameraModelType::FISHEYE,
+    CameraDistortionType::KBPolarSpline,
     DistortionType::None,
     false,
     DensifyAccumMode::Avg,
@@ -58,8 +58,8 @@ template void rasterize_to_pixels_eval3d_bwd_kernel_wrapper<
 
 template void rasterize_to_pixels_eval3d_bwd_kernel_wrapper<
     Vanilla3DGUT<0>,
-    CameraModelType::EQUISOLID,
-    CameraDistortionType::OpenCV,
+    CameraModelType::FISHEYE,
+    CameraDistortionType::KBPolarSpline,
     DistortionType::D,
     true,
     DensifyAccumMode::None,
@@ -110,8 +110,8 @@ template void rasterize_to_pixels_eval3d_bwd_kernel_wrapper<
 
 template void rasterize_to_pixels_eval3d_bwd_kernel_wrapper<
     Vanilla3DGUT<0>,
-    CameraModelType::EQUISOLID,
-    CameraDistortionType::OpenCV,
+    CameraModelType::FISHEYE,
+    CameraDistortionType::KBPolarSpline,
     DistortionType::D,
     true,
     DensifyAccumMode::None,
@@ -162,8 +162,8 @@ template void rasterize_to_pixels_eval3d_bwd_kernel_wrapper<
 
 template void rasterize_to_pixels_eval3d_bwd_kernel_wrapper<
     Vanilla3DGUT<0>,
-    CameraModelType::EQUISOLID,
-    CameraDistortionType::OpenCV,
+    CameraModelType::FISHEYE,
+    CameraDistortionType::KBPolarSpline,
     DistortionType::D,
     true,
     DensifyAccumMode::Max,
@@ -214,8 +214,8 @@ template void rasterize_to_pixels_eval3d_bwd_kernel_wrapper<
 
 template void rasterize_to_pixels_eval3d_bwd_kernel_wrapper<
     Vanilla3DGUT<0>,
-    CameraModelType::EQUISOLID,
-    CameraDistortionType::OpenCV,
+    CameraModelType::FISHEYE,
+    CameraDistortionType::KBPolarSpline,
     DistortionType::D,
     true,
     DensifyAccumMode::Max,
@@ -266,8 +266,8 @@ template void rasterize_to_pixels_eval3d_bwd_kernel_wrapper<
 
 template void rasterize_to_pixels_eval3d_bwd_kernel_wrapper<
     Vanilla3DGUT<0>,
-    CameraModelType::EQUISOLID,
-    CameraDistortionType::OpenCV,
+    CameraModelType::FISHEYE,
+    CameraDistortionType::KBPolarSpline,
     DistortionType::D,
     true,
     DensifyAccumMode::Sum,
@@ -318,8 +318,8 @@ template void rasterize_to_pixels_eval3d_bwd_kernel_wrapper<
 
 template void rasterize_to_pixels_eval3d_bwd_kernel_wrapper<
     Vanilla3DGUT<0>,
-    CameraModelType::EQUISOLID,
-    CameraDistortionType::OpenCV,
+    CameraModelType::FISHEYE,
+    CameraDistortionType::KBPolarSpline,
     DistortionType::D,
     true,
     DensifyAccumMode::Sum,
@@ -370,8 +370,8 @@ template void rasterize_to_pixels_eval3d_bwd_kernel_wrapper<
 
 template void rasterize_to_pixels_eval3d_bwd_kernel_wrapper<
     Vanilla3DGUT<0>,
-    CameraModelType::EQUISOLID,
-    CameraDistortionType::OpenCV,
+    CameraModelType::FISHEYE,
+    CameraDistortionType::KBPolarSpline,
     DistortionType::D,
     true,
     DensifyAccumMode::Avg,
@@ -422,8 +422,8 @@ template void rasterize_to_pixels_eval3d_bwd_kernel_wrapper<
 
 template void rasterize_to_pixels_eval3d_bwd_kernel_wrapper<
     Vanilla3DGUT<0>,
-    CameraModelType::EQUISOLID,
-    CameraDistortionType::OpenCV,
+    CameraModelType::FISHEYE,
+    CameraDistortionType::KBPolarSpline,
     DistortionType::D,
     true,
     DensifyAccumMode::Avg,

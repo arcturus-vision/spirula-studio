@@ -30,6 +30,15 @@ inline const double* defaultIntr(uint32_t model, int& n) {
     static const double prism[12] = {300.0, 305.0, 0.01,  -0.002, 3e-4,  -1e-5,
                                      2e-4,  -1e-6, 1e-4,  -2e-4,  320.0, 240.0};
     static const double equirect[2] = {640.0, 480.0};
+    static const std::vector<double> polar = [] {
+        std::vector<double> p(61, 0.0);
+        std::copy(fisheye, fisheye + 8, p.begin());
+        p[8] = 100.0;
+        p[9] = p[10] = 1.0;
+        for (int i = 0; i < 50; ++i)
+            p[11 + i] = 0.1 * (i % 7 - 3);
+        return p;
+    }();
     switch (model) {
         case 0: n = 3; return snavely;
         case 1: n = 3; return snavely_f;
@@ -40,6 +49,9 @@ inline const double* defaultIntr(uint32_t model, int& n) {
         case 6: n = 8; return fisheye;
         case 7: n = 12; return full;
         case 8: n = 12; return prism;
+        case 10:
+            n = 61;
+            return polar.data();
         default: n = 2; return equirect;
     }
 }
@@ -132,7 +144,9 @@ inline BAProblem makeProblem(uint32_t model, uint32_t nImg, uint32_t nPt, uint32
     for (uint32_t g = 0; g < groups; g++) {
         for (int j = 0; j < ni; j++) P.intr[(size_t)ni * g + j] = base[j] * (1.0 + 0.005 * unit(rng));
         // EQUIRECTANGULAR's two parameters are the image size and never refine
-        const uint32_t nf = model == 9 ? 0u : (uint32_t)(nfree >= 0 ? std::min(nfree, ni) : ni);
+        const int refinable = model == 10 ? 2 : ni;
+        const uint32_t nf =
+            model == 9 ? 0u : (uint32_t)(nfree >= 0 ? std::min(nfree, refinable) : refinable);
         P.groups[g] = {(uint32_t)(ni * g), 0, nf, model};
     }
     for (uint32_t i = 0; i < nImg; i++) P.image_group[i] = groups == 1 ? 0 : i;

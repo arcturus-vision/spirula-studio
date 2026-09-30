@@ -1,6 +1,7 @@
 #include "data/Json.h"
 #include "sfm/core/ArcturusCapture.h"
 #include "sfm/core/Model.h"
+#include "sfm/ba/CpuCamera.h"
 #include "sfm/core/Telemetry.h"
 #include <chrono>
 #include <cmath>
@@ -27,6 +28,78 @@ std::vector<uint8_t> packet(const std::string &format, const std::string &payloa
     add("AVmd", payload);
     return out;
 }
+void polar_test() {
+    sfm::Camera c;
+    c.model = sfm::CamModel::KBPolarSpline;
+    c.fx = 1480;
+    c.fy = 1484;
+    c.cx = 1390;
+    c.cy = 1222;
+    c.k1 = -.04;
+    c.k2 = -.16;
+    c.k3 = .11;
+    c.k4 = -.023;
+    c.polar[0] = 249;
+    c.polar[1] = .8;
+    c.polar[2] = 1.1;
+    for (int i = 0; i < 50; ++i)
+        c.polar[3 + i] = .2 * ((i * 7) % 13 - 6);
+    double packed[61], ba[61];
+    sfm::packColmap(c, packed);
+    sfm::Camera copy;
+    copy.model = c.model;
+    sfm::unpackColmap(copy, packed);
+    require(copy.polar == c.polar, "polar serialization");
+    sfm::packIntrinsics(c, ba);
+    sfm::unpackIntrinsics(copy, ba);
+    require(copy.polar == c.polar, "polar BA serialization");
+    require(sfm::camNumFreeParams(c.model, true, true) == 2,
+            "polar spline and principal point fixed");
+    for (double x : {-1.4, -.7, 0., .7, 1.4})
+        for (double y : {-1., -.000001, 0., .000001, 1.}) {
+            sfm::Vec3 ray{x, y, 1};
+            auto uv = c.project(ray);
+            auto back = c.bearing(uv);
+            require((back - ray * (1. / ray.norm())).norm() < 1e-9, "polar ray round trip");
+            double xyz[3] = {x, y, 1}, q[2];
+            bacpu::KBPolarSplineModel::project(ba, xyz, q);
+            require(std::hypot(q[0] - uv.x, q[1] - uv.y) < 1e-8, "polar BA projection");
+            double obs[2] = {0, 0}, residual[2], dp[2][3], di[122];
+            bacpu::projectJacobian<bacpu::KBPolarSplineModel>(ba, xyz, obs, residual, dp, di);
+            for (int k = 0; k < 2; ++k) {
+                double plus[61], minus[61], a[2], b[2];
+                std::copy(ba, ba + 61, plus);
+                std::copy(ba, ba + 61, minus);
+                plus[k] += 1e-3;
+                minus[k] -= 1e-3;
+                bacpu::KBPolarSplineModel::project(plus, xyz, a);
+                bacpu::KBPolarSplineModel::project(minus, xyz, b);
+                for (int row = 0; row < 2; ++row)
+                    require(std::abs(di[row * 61 + k] - (a[row] - b[row]) / 2e-3) < 1e-6,
+                            "polar focal Jacobian");
+            }
+            for (int k = 0; k < 3; ++k) {
+                double plus[3] = {x, y, 1}, minus[3] = {x, y, 1}, a[2], b[2];
+                plus[k] += 1e-6;
+                minus[k] -= 1e-6;
+                bacpu::KBPolarSplineModel::project(ba, plus, a);
+                bacpu::KBPolarSplineModel::project(ba, minus, b);
+                for (int row = 0; row < 2; ++row)
+                    require(std::abs(dp[row][k] - (a[row] - b[row]) / 2e-6) < 1e-3,
+                            "polar BA Jacobian");
+            }
+        }
+    double zero[50]{}, out[2];
+    polar_spline::shift(2.3, -1.7, zero, out);
+    require(out[0] == 0 && out[1] == 0, "zero spline identity");
+    for (int i = 0; i < 25; ++i)
+        zero[i] = 2;
+    polar_spline::shift(3., 0., zero, out);
+    require(std::abs(out[0] - 2) < 1e-12 && std::abs(out[1]) < 1e-12, "radial knot direction");
+    polar_spline::shift(0., 3., zero, out);
+    require(std::abs(out[0]) < 1e-12 && std::abs(out[1] - 2) < 1e-12, "angular knot rotation");
+}
+
 void alignment_test() {
     namespace fs = std::filesystem;
     const auto root = fs::temp_directory_path() /
@@ -97,6 +170,7 @@ void alignment_test() {
 }
 int main(int argc, char **argv) {
     try {
+        polar_test();
         if (argc == 4 && std::string(argv[1]) == "--align") {
             sfm::align_arcturus_dataset(argv[2], argv[3]);
             std::cout << "Native Arcturus alignment complete\n";
@@ -165,6 +239,36 @@ int main(int argc, char **argv) {
         require(parsed.cameras[0].params[0] == 1482 && parsed.cameras[0].params[1] == 1485 &&
                     parsed.cameras[0].params[2] == 1389 && parsed.cameras[0].params[7] == .01,
                 "asymmetric KB4 calibration");
+        std::string polar_intr = intrinsics;
+        polar_intr.replace(polar_intr.find("kb4"), 3, "kb_polar_spline");
+        polar_intr.pop_back();
+        std::string knots = "[";
+        for (int i = 0; i < 25; ++i)
+            knots += (i ? ",0.25" : "0.25");
+        knots += "]";
+        polar_intr +=
+            ",\"gridSize\":[5,5],\"nodeSpacingR\":249,\"scaledU\":1,\"scaledV\":1,\"sR\":" + knots +
+            ",\"sT\":" + knots + "}";
+        std::string polar_raw = raw;
+        polar_raw.replace(polar_raw.find(intrinsics), intrinsics.size(),
+                          intrinsics + "," + polar_intr);
+        sfm::ArcturusCapture polar_capture;
+        require(sfm::append_arcturus_packet(packet("json/v1", polar_raw), polar_capture),
+                "polar metadata");
+        require(polar_capture.cameras[0].model == "kb-polar-spline" &&
+                    polar_capture.cameras[0].params.size() == 61,
+                "prefer complete polar model over KB4");
+        require(polar_capture.cameras[1].model == "opencv-fisheye", "KB4 fallback");
+        auto malformed = polar_raw;
+        malformed.replace(malformed.find("[5,5]"), 5, "[4,5]");
+        rejected = false;
+        try {
+            sfm::ArcturusCapture invalid;
+            sfm::append_arcturus_packet(packet("json/v1", malformed), invalid);
+        } catch (...) {
+            rejected = true;
+        }
+        require(rejected, "unsupported polar grid rejected");
         rejected = false;
         try {
             sfm::append_arcturus_packet(packet("json/v2", raw), parsed);

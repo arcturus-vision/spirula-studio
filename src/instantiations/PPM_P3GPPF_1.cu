@@ -6,6 +6,78 @@
 
 template void projection_packed_mask_kernel_wrapper<
     Vanilla3DGS<0>,
+    CameraModelType::EQUISOLID,
+    CameraDistortionType::OpenCV
+>(
+    cudaStream_t stream,
+    const uint32_t C,
+    const uint32_t N,
+    Vanilla3DGS<0>::WorldBuffer splats_world,  // [N, ...]
+    const float *__restrict__ viewmats, // [C, 4, 4]
+    const float4 *__restrict__ intrins,  // [C, 4], fx, fy, cx, cy
+    const CameraDistortionCoeffsBuffer dist_coeffs_buffer,
+    const uint32_t image_width,
+    const uint32_t image_height,
+    // outputs
+    uint32_t *__restrict__ mask_bits,
+    int32_t *__restrict__ block_counts,
+    const uint8_t* __restrict__ sh_value_packed,
+    const float2* __restrict__ sh_value_bounds,
+    const uint32_t num_sh_buffer,
+    const int sh_value_bits,
+    const int64_t sh_bounds_stride
+);
+
+template void projection_packed_mask_kernel_wrapper<
+    Vanilla3DGS<0>,
+    CameraModelType::EQUISOLID,
+    CameraDistortionType::ThinPrism
+>(
+    cudaStream_t stream,
+    const uint32_t C,
+    const uint32_t N,
+    Vanilla3DGS<0>::WorldBuffer splats_world,  // [N, ...]
+    const float *__restrict__ viewmats, // [C, 4, 4]
+    const float4 *__restrict__ intrins,  // [C, 4], fx, fy, cx, cy
+    const CameraDistortionCoeffsBuffer dist_coeffs_buffer,
+    const uint32_t image_width,
+    const uint32_t image_height,
+    // outputs
+    uint32_t *__restrict__ mask_bits,
+    int32_t *__restrict__ block_counts,
+    const uint8_t* __restrict__ sh_value_packed,
+    const float2* __restrict__ sh_value_bounds,
+    const uint32_t num_sh_buffer,
+    const int sh_value_bits,
+    const int64_t sh_bounds_stride
+);
+
+template void projection_packed_mask_kernel_wrapper<
+    Vanilla3DGS<0>,
+    CameraModelType::EQUISOLID,
+    CameraDistortionType::KBPolarSpline
+>(
+    cudaStream_t stream,
+    const uint32_t C,
+    const uint32_t N,
+    Vanilla3DGS<0>::WorldBuffer splats_world,  // [N, ...]
+    const float *__restrict__ viewmats, // [C, 4, 4]
+    const float4 *__restrict__ intrins,  // [C, 4], fx, fy, cx, cy
+    const CameraDistortionCoeffsBuffer dist_coeffs_buffer,
+    const uint32_t image_width,
+    const uint32_t image_height,
+    // outputs
+    uint32_t *__restrict__ mask_bits,
+    int32_t *__restrict__ block_counts,
+    const uint8_t* __restrict__ sh_value_packed,
+    const float2* __restrict__ sh_value_bounds,
+    const uint32_t num_sh_buffer,
+    const int sh_value_bits,
+    const int64_t sh_bounds_stride
+);
+
+template void projection_packed_mask_kernel_wrapper<
+    Vanilla3DGS<0>,
     CameraModelType::EQUIRECTANGULAR,
     CameraDistortionType::None
 >(
@@ -102,104 +174,32 @@ template void projection_packed_mask_kernel_wrapper<
 
 template void projection_packed_mask_kernel_wrapper<
     MipSplatting<0>,
+    CameraModelType::PINHOLE,
+    CameraDistortionType::KBPolarSpline
+>(
+    cudaStream_t stream,
+    const uint32_t C,
+    const uint32_t N,
+    MipSplatting<0>::WorldBuffer splats_world,  // [N, ...]
+    const float *__restrict__ viewmats, // [C, 4, 4]
+    const float4 *__restrict__ intrins,  // [C, 4], fx, fy, cx, cy
+    const CameraDistortionCoeffsBuffer dist_coeffs_buffer,
+    const uint32_t image_width,
+    const uint32_t image_height,
+    // outputs
+    uint32_t *__restrict__ mask_bits,
+    int32_t *__restrict__ block_counts,
+    const uint8_t* __restrict__ sh_value_packed,
+    const float2* __restrict__ sh_value_bounds,
+    const uint32_t num_sh_buffer,
+    const int sh_value_bits,
+    const int64_t sh_bounds_stride
+);
+
+template void projection_packed_mask_kernel_wrapper<
+    MipSplatting<0>,
     CameraModelType::FISHEYE,
     CameraDistortionType::None
->(
-    cudaStream_t stream,
-    const uint32_t C,
-    const uint32_t N,
-    MipSplatting<0>::WorldBuffer splats_world,  // [N, ...]
-    const float *__restrict__ viewmats, // [C, 4, 4]
-    const float4 *__restrict__ intrins,  // [C, 4], fx, fy, cx, cy
-    const CameraDistortionCoeffsBuffer dist_coeffs_buffer,
-    const uint32_t image_width,
-    const uint32_t image_height,
-    // outputs
-    uint32_t *__restrict__ mask_bits,
-    int32_t *__restrict__ block_counts,
-    const uint8_t* __restrict__ sh_value_packed,
-    const float2* __restrict__ sh_value_bounds,
-    const uint32_t num_sh_buffer,
-    const int sh_value_bits,
-    const int64_t sh_bounds_stride
-);
-
-template void projection_packed_mask_kernel_wrapper<
-    MipSplatting<0>,
-    CameraModelType::FISHEYE,
-    CameraDistortionType::OpenCV
->(
-    cudaStream_t stream,
-    const uint32_t C,
-    const uint32_t N,
-    MipSplatting<0>::WorldBuffer splats_world,  // [N, ...]
-    const float *__restrict__ viewmats, // [C, 4, 4]
-    const float4 *__restrict__ intrins,  // [C, 4], fx, fy, cx, cy
-    const CameraDistortionCoeffsBuffer dist_coeffs_buffer,
-    const uint32_t image_width,
-    const uint32_t image_height,
-    // outputs
-    uint32_t *__restrict__ mask_bits,
-    int32_t *__restrict__ block_counts,
-    const uint8_t* __restrict__ sh_value_packed,
-    const float2* __restrict__ sh_value_bounds,
-    const uint32_t num_sh_buffer,
-    const int sh_value_bits,
-    const int64_t sh_bounds_stride
-);
-
-template void projection_packed_mask_kernel_wrapper<
-    MipSplatting<0>,
-    CameraModelType::FISHEYE,
-    CameraDistortionType::ThinPrism
->(
-    cudaStream_t stream,
-    const uint32_t C,
-    const uint32_t N,
-    MipSplatting<0>::WorldBuffer splats_world,  // [N, ...]
-    const float *__restrict__ viewmats, // [C, 4, 4]
-    const float4 *__restrict__ intrins,  // [C, 4], fx, fy, cx, cy
-    const CameraDistortionCoeffsBuffer dist_coeffs_buffer,
-    const uint32_t image_width,
-    const uint32_t image_height,
-    // outputs
-    uint32_t *__restrict__ mask_bits,
-    int32_t *__restrict__ block_counts,
-    const uint8_t* __restrict__ sh_value_packed,
-    const float2* __restrict__ sh_value_bounds,
-    const uint32_t num_sh_buffer,
-    const int sh_value_bits,
-    const int64_t sh_bounds_stride
-);
-
-template void projection_packed_mask_kernel_wrapper<
-    MipSplatting<0>,
-    CameraModelType::EQUISOLID,
-    CameraDistortionType::None
->(
-    cudaStream_t stream,
-    const uint32_t C,
-    const uint32_t N,
-    MipSplatting<0>::WorldBuffer splats_world,  // [N, ...]
-    const float *__restrict__ viewmats, // [C, 4, 4]
-    const float4 *__restrict__ intrins,  // [C, 4], fx, fy, cx, cy
-    const CameraDistortionCoeffsBuffer dist_coeffs_buffer,
-    const uint32_t image_width,
-    const uint32_t image_height,
-    // outputs
-    uint32_t *__restrict__ mask_bits,
-    int32_t *__restrict__ block_counts,
-    const uint8_t* __restrict__ sh_value_packed,
-    const float2* __restrict__ sh_value_bounds,
-    const uint32_t num_sh_buffer,
-    const int sh_value_bits,
-    const int64_t sh_bounds_stride
-);
-
-template void projection_packed_mask_kernel_wrapper<
-    MipSplatting<0>,
-    CameraModelType::EQUISOLID,
-    CameraDistortionType::OpenCV
 >(
     cudaStream_t stream,
     const uint32_t C,

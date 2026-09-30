@@ -6,9 +6,149 @@
 
 template void rasterize_to_pixels_eval3d_fwd_kernel_wrapper<
     Vanilla3DGUT<0>,
+    CameraModelType::PINHOLE,
+    CameraDistortionType::KBPolarSpline,
+    DistortionType::RGB_D,
+    true,
+    false
+>(
+    cudaStream_t stream,
+    const uint32_t I,
+    const uint32_t N,
+    const uint32_t n_isects,
+    const uint32_t *__restrict__ gaussian_ids,  // [nnz] optional, for packed mode
+    const Vanilla3DGUT<0>::WorldBuffer splat_wbuffer,
+    const Vanilla3DGUT<0>::ScreenBuffer splat_sbuffer,
+    const float *__restrict__ viewmats, // [B, C, 4, 4]
+    const float4 *__restrict__ intrins,  // [B, C, 4], fx, fy, cx, cy
+    const CameraDistortionCoeffsBuffer dist_coeffs_buffer,
+    const uint2 *__restrict__ aabb,   // [..., N] packed AABB
+    const uint32_t image_width,
+    const uint32_t image_height,
+    const uint32_t tile_width,
+    const uint32_t tile_height,
+    const int macro_log2,
+    const int32_t *__restrict__ tile_offsets, // [I, tile_height, tile_width]
+    const int32_t *__restrict__ flatten_ids,  // [n_isects]
+    RenderOutput::Buffer render_colors, // [I, image_height, image_width, ...]
+    float *__restrict__ render_Ts, // [I, image_height, image_width, 1]
+    int32_t *__restrict__ last_ids, // [I, image_height, image_width]
+    RenderOutput::Buffer render_distortions, // [I, image_height, image_width, ...]
+    float *__restrict__ render_median, // [I, image_height, image_width, 1], optional
+    const SplatScoreRender score,
+    const float kernel_cut
+);
+
+template void rasterize_to_pixels_eval3d_fwd_kernel_wrapper<
+    Vanilla3DGUT<0>,
+    CameraModelType::PINHOLE,
+    CameraDistortionType::KBPolarSpline,
+    DistortionType::RGB_D,
+    false,
+    true
+>(
+    cudaStream_t stream,
+    const uint32_t I,
+    const uint32_t N,
+    const uint32_t n_isects,
+    const uint32_t *__restrict__ gaussian_ids,  // [nnz] optional, for packed mode
+    const Vanilla3DGUT<0>::WorldBuffer splat_wbuffer,
+    const Vanilla3DGUT<0>::ScreenBuffer splat_sbuffer,
+    const float *__restrict__ viewmats, // [B, C, 4, 4]
+    const float4 *__restrict__ intrins,  // [B, C, 4], fx, fy, cx, cy
+    const CameraDistortionCoeffsBuffer dist_coeffs_buffer,
+    const uint2 *__restrict__ aabb,   // [..., N] packed AABB
+    const uint32_t image_width,
+    const uint32_t image_height,
+    const uint32_t tile_width,
+    const uint32_t tile_height,
+    const int macro_log2,
+    const int32_t *__restrict__ tile_offsets, // [I, tile_height, tile_width]
+    const int32_t *__restrict__ flatten_ids,  // [n_isects]
+    RenderOutput::Buffer render_colors, // [I, image_height, image_width, ...]
+    float *__restrict__ render_Ts, // [I, image_height, image_width, 1]
+    int32_t *__restrict__ last_ids, // [I, image_height, image_width]
+    RenderOutput::Buffer render_distortions, // [I, image_height, image_width, ...]
+    float *__restrict__ render_median, // [I, image_height, image_width, 1], optional
+    const SplatScoreRender score,
+    const float kernel_cut
+);
+
+template void rasterize_to_pixels_eval3d_fwd_kernel_wrapper<
+    Vanilla3DGUT<0>,
+    CameraModelType::PINHOLE,
+    CameraDistortionType::KBPolarSpline,
+    DistortionType::RGB_D,
+    false,
+    false
+>(
+    cudaStream_t stream,
+    const uint32_t I,
+    const uint32_t N,
+    const uint32_t n_isects,
+    const uint32_t *__restrict__ gaussian_ids,  // [nnz] optional, for packed mode
+    const Vanilla3DGUT<0>::WorldBuffer splat_wbuffer,
+    const Vanilla3DGUT<0>::ScreenBuffer splat_sbuffer,
+    const float *__restrict__ viewmats, // [B, C, 4, 4]
+    const float4 *__restrict__ intrins,  // [B, C, 4], fx, fy, cx, cy
+    const CameraDistortionCoeffsBuffer dist_coeffs_buffer,
+    const uint2 *__restrict__ aabb,   // [..., N] packed AABB
+    const uint32_t image_width,
+    const uint32_t image_height,
+    const uint32_t tile_width,
+    const uint32_t tile_height,
+    const int macro_log2,
+    const int32_t *__restrict__ tile_offsets, // [I, tile_height, tile_width]
+    const int32_t *__restrict__ flatten_ids,  // [n_isects]
+    RenderOutput::Buffer render_colors, // [I, image_height, image_width, ...]
+    float *__restrict__ render_Ts, // [I, image_height, image_width, 1]
+    int32_t *__restrict__ last_ids, // [I, image_height, image_width]
+    RenderOutput::Buffer render_distortions, // [I, image_height, image_width, ...]
+    float *__restrict__ render_median, // [I, image_height, image_width, 1], optional
+    const SplatScoreRender score,
+    const float kernel_cut
+);
+
+template void rasterize_to_pixels_eval3d_fwd_kernel_wrapper<
+    Vanilla3DGUT<0>,
     CameraModelType::FISHEYE,
     CameraDistortionType::None,
-    DistortionType::RGB_D,
+    DistortionType::None,
+    true,
+    true
+>(
+    cudaStream_t stream,
+    const uint32_t I,
+    const uint32_t N,
+    const uint32_t n_isects,
+    const uint32_t *__restrict__ gaussian_ids,  // [nnz] optional, for packed mode
+    const Vanilla3DGUT<0>::WorldBuffer splat_wbuffer,
+    const Vanilla3DGUT<0>::ScreenBuffer splat_sbuffer,
+    const float *__restrict__ viewmats, // [B, C, 4, 4]
+    const float4 *__restrict__ intrins,  // [B, C, 4], fx, fy, cx, cy
+    const CameraDistortionCoeffsBuffer dist_coeffs_buffer,
+    const uint2 *__restrict__ aabb,   // [..., N] packed AABB
+    const uint32_t image_width,
+    const uint32_t image_height,
+    const uint32_t tile_width,
+    const uint32_t tile_height,
+    const int macro_log2,
+    const int32_t *__restrict__ tile_offsets, // [I, tile_height, tile_width]
+    const int32_t *__restrict__ flatten_ids,  // [n_isects]
+    RenderOutput::Buffer render_colors, // [I, image_height, image_width, ...]
+    float *__restrict__ render_Ts, // [I, image_height, image_width, 1]
+    int32_t *__restrict__ last_ids, // [I, image_height, image_width]
+    RenderOutput::Buffer render_distortions, // [I, image_height, image_width, ...]
+    float *__restrict__ render_median, // [I, image_height, image_width, 1], optional
+    const SplatScoreRender score,
+    const float kernel_cut
+);
+
+template void rasterize_to_pixels_eval3d_fwd_kernel_wrapper<
+    Vanilla3DGUT<0>,
+    CameraModelType::FISHEYE,
+    CameraDistortionType::None,
+    DistortionType::None,
     true,
     false
 >(
@@ -43,7 +183,7 @@ template void rasterize_to_pixels_eval3d_fwd_kernel_wrapper<
     Vanilla3DGUT<0>,
     CameraModelType::FISHEYE,
     CameraDistortionType::None,
-    DistortionType::RGB_D,
+    DistortionType::None,
     false,
     true
 >(
@@ -78,146 +218,6 @@ template void rasterize_to_pixels_eval3d_fwd_kernel_wrapper<
     Vanilla3DGUT<0>,
     CameraModelType::FISHEYE,
     CameraDistortionType::None,
-    DistortionType::RGB_D,
-    false,
-    false
->(
-    cudaStream_t stream,
-    const uint32_t I,
-    const uint32_t N,
-    const uint32_t n_isects,
-    const uint32_t *__restrict__ gaussian_ids,  // [nnz] optional, for packed mode
-    const Vanilla3DGUT<0>::WorldBuffer splat_wbuffer,
-    const Vanilla3DGUT<0>::ScreenBuffer splat_sbuffer,
-    const float *__restrict__ viewmats, // [B, C, 4, 4]
-    const float4 *__restrict__ intrins,  // [B, C, 4], fx, fy, cx, cy
-    const CameraDistortionCoeffsBuffer dist_coeffs_buffer,
-    const uint2 *__restrict__ aabb,   // [..., N] packed AABB
-    const uint32_t image_width,
-    const uint32_t image_height,
-    const uint32_t tile_width,
-    const uint32_t tile_height,
-    const int macro_log2,
-    const int32_t *__restrict__ tile_offsets, // [I, tile_height, tile_width]
-    const int32_t *__restrict__ flatten_ids,  // [n_isects]
-    RenderOutput::Buffer render_colors, // [I, image_height, image_width, ...]
-    float *__restrict__ render_Ts, // [I, image_height, image_width, 1]
-    int32_t *__restrict__ last_ids, // [I, image_height, image_width]
-    RenderOutput::Buffer render_distortions, // [I, image_height, image_width, ...]
-    float *__restrict__ render_median, // [I, image_height, image_width, 1], optional
-    const SplatScoreRender score,
-    const float kernel_cut
-);
-
-template void rasterize_to_pixels_eval3d_fwd_kernel_wrapper<
-    Vanilla3DGUT<0>,
-    CameraModelType::FISHEYE,
-    CameraDistortionType::OpenCV,
-    DistortionType::None,
-    true,
-    true
->(
-    cudaStream_t stream,
-    const uint32_t I,
-    const uint32_t N,
-    const uint32_t n_isects,
-    const uint32_t *__restrict__ gaussian_ids,  // [nnz] optional, for packed mode
-    const Vanilla3DGUT<0>::WorldBuffer splat_wbuffer,
-    const Vanilla3DGUT<0>::ScreenBuffer splat_sbuffer,
-    const float *__restrict__ viewmats, // [B, C, 4, 4]
-    const float4 *__restrict__ intrins,  // [B, C, 4], fx, fy, cx, cy
-    const CameraDistortionCoeffsBuffer dist_coeffs_buffer,
-    const uint2 *__restrict__ aabb,   // [..., N] packed AABB
-    const uint32_t image_width,
-    const uint32_t image_height,
-    const uint32_t tile_width,
-    const uint32_t tile_height,
-    const int macro_log2,
-    const int32_t *__restrict__ tile_offsets, // [I, tile_height, tile_width]
-    const int32_t *__restrict__ flatten_ids,  // [n_isects]
-    RenderOutput::Buffer render_colors, // [I, image_height, image_width, ...]
-    float *__restrict__ render_Ts, // [I, image_height, image_width, 1]
-    int32_t *__restrict__ last_ids, // [I, image_height, image_width]
-    RenderOutput::Buffer render_distortions, // [I, image_height, image_width, ...]
-    float *__restrict__ render_median, // [I, image_height, image_width, 1], optional
-    const SplatScoreRender score,
-    const float kernel_cut
-);
-
-template void rasterize_to_pixels_eval3d_fwd_kernel_wrapper<
-    Vanilla3DGUT<0>,
-    CameraModelType::FISHEYE,
-    CameraDistortionType::OpenCV,
-    DistortionType::None,
-    true,
-    false
->(
-    cudaStream_t stream,
-    const uint32_t I,
-    const uint32_t N,
-    const uint32_t n_isects,
-    const uint32_t *__restrict__ gaussian_ids,  // [nnz] optional, for packed mode
-    const Vanilla3DGUT<0>::WorldBuffer splat_wbuffer,
-    const Vanilla3DGUT<0>::ScreenBuffer splat_sbuffer,
-    const float *__restrict__ viewmats, // [B, C, 4, 4]
-    const float4 *__restrict__ intrins,  // [B, C, 4], fx, fy, cx, cy
-    const CameraDistortionCoeffsBuffer dist_coeffs_buffer,
-    const uint2 *__restrict__ aabb,   // [..., N] packed AABB
-    const uint32_t image_width,
-    const uint32_t image_height,
-    const uint32_t tile_width,
-    const uint32_t tile_height,
-    const int macro_log2,
-    const int32_t *__restrict__ tile_offsets, // [I, tile_height, tile_width]
-    const int32_t *__restrict__ flatten_ids,  // [n_isects]
-    RenderOutput::Buffer render_colors, // [I, image_height, image_width, ...]
-    float *__restrict__ render_Ts, // [I, image_height, image_width, 1]
-    int32_t *__restrict__ last_ids, // [I, image_height, image_width]
-    RenderOutput::Buffer render_distortions, // [I, image_height, image_width, ...]
-    float *__restrict__ render_median, // [I, image_height, image_width, 1], optional
-    const SplatScoreRender score,
-    const float kernel_cut
-);
-
-template void rasterize_to_pixels_eval3d_fwd_kernel_wrapper<
-    Vanilla3DGUT<0>,
-    CameraModelType::FISHEYE,
-    CameraDistortionType::OpenCV,
-    DistortionType::None,
-    false,
-    true
->(
-    cudaStream_t stream,
-    const uint32_t I,
-    const uint32_t N,
-    const uint32_t n_isects,
-    const uint32_t *__restrict__ gaussian_ids,  // [nnz] optional, for packed mode
-    const Vanilla3DGUT<0>::WorldBuffer splat_wbuffer,
-    const Vanilla3DGUT<0>::ScreenBuffer splat_sbuffer,
-    const float *__restrict__ viewmats, // [B, C, 4, 4]
-    const float4 *__restrict__ intrins,  // [B, C, 4], fx, fy, cx, cy
-    const CameraDistortionCoeffsBuffer dist_coeffs_buffer,
-    const uint2 *__restrict__ aabb,   // [..., N] packed AABB
-    const uint32_t image_width,
-    const uint32_t image_height,
-    const uint32_t tile_width,
-    const uint32_t tile_height,
-    const int macro_log2,
-    const int32_t *__restrict__ tile_offsets, // [I, tile_height, tile_width]
-    const int32_t *__restrict__ flatten_ids,  // [n_isects]
-    RenderOutput::Buffer render_colors, // [I, image_height, image_width, ...]
-    float *__restrict__ render_Ts, // [I, image_height, image_width, 1]
-    int32_t *__restrict__ last_ids, // [I, image_height, image_width]
-    RenderOutput::Buffer render_distortions, // [I, image_height, image_width, ...]
-    float *__restrict__ render_median, // [I, image_height, image_width, 1], optional
-    const SplatScoreRender score,
-    const float kernel_cut
-);
-
-template void rasterize_to_pixels_eval3d_fwd_kernel_wrapper<
-    Vanilla3DGUT<0>,
-    CameraModelType::FISHEYE,
-    CameraDistortionType::OpenCV,
     DistortionType::None,
     false,
     false
@@ -252,7 +252,7 @@ template void rasterize_to_pixels_eval3d_fwd_kernel_wrapper<
 template void rasterize_to_pixels_eval3d_fwd_kernel_wrapper<
     Vanilla3DGUT<0>,
     CameraModelType::FISHEYE,
-    CameraDistortionType::OpenCV,
+    CameraDistortionType::None,
     DistortionType::D,
     true,
     true
@@ -287,7 +287,7 @@ template void rasterize_to_pixels_eval3d_fwd_kernel_wrapper<
 template void rasterize_to_pixels_eval3d_fwd_kernel_wrapper<
     Vanilla3DGUT<0>,
     CameraModelType::FISHEYE,
-    CameraDistortionType::OpenCV,
+    CameraDistortionType::None,
     DistortionType::D,
     true,
     false

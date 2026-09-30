@@ -7,7 +7,7 @@
 template void rasterize_to_pixels_eval3d_fwd_kernel_wrapper<
     Vanilla3DGUT<0>,
     CameraModelType::FISHEYE,
-    CameraDistortionType::ThinPrism,
+    CameraDistortionType::OpenCV,
     DistortionType::None,
     false,
     false
@@ -42,7 +42,7 @@ template void rasterize_to_pixels_eval3d_fwd_kernel_wrapper<
 template void rasterize_to_pixels_eval3d_fwd_kernel_wrapper<
     Vanilla3DGUT<0>,
     CameraModelType::FISHEYE,
-    CameraDistortionType::ThinPrism,
+    CameraDistortionType::OpenCV,
     DistortionType::D,
     true,
     true
@@ -77,7 +77,7 @@ template void rasterize_to_pixels_eval3d_fwd_kernel_wrapper<
 template void rasterize_to_pixels_eval3d_fwd_kernel_wrapper<
     Vanilla3DGUT<0>,
     CameraModelType::FISHEYE,
-    CameraDistortionType::ThinPrism,
+    CameraDistortionType::OpenCV,
     DistortionType::D,
     true,
     false
@@ -112,7 +112,7 @@ template void rasterize_to_pixels_eval3d_fwd_kernel_wrapper<
 template void rasterize_to_pixels_eval3d_fwd_kernel_wrapper<
     Vanilla3DGUT<0>,
     CameraModelType::FISHEYE,
-    CameraDistortionType::ThinPrism,
+    CameraDistortionType::OpenCV,
     DistortionType::D,
     false,
     true
@@ -147,7 +147,7 @@ template void rasterize_to_pixels_eval3d_fwd_kernel_wrapper<
 template void rasterize_to_pixels_eval3d_fwd_kernel_wrapper<
     Vanilla3DGUT<0>,
     CameraModelType::FISHEYE,
-    CameraDistortionType::ThinPrism,
+    CameraDistortionType::OpenCV,
     DistortionType::D,
     false,
     false
@@ -182,7 +182,7 @@ template void rasterize_to_pixels_eval3d_fwd_kernel_wrapper<
 template void rasterize_to_pixels_eval3d_fwd_kernel_wrapper<
     Vanilla3DGUT<0>,
     CameraModelType::FISHEYE,
-    CameraDistortionType::ThinPrism,
+    CameraDistortionType::OpenCV,
     DistortionType::RGB_D,
     true,
     true
@@ -217,7 +217,7 @@ template void rasterize_to_pixels_eval3d_fwd_kernel_wrapper<
 template void rasterize_to_pixels_eval3d_fwd_kernel_wrapper<
     Vanilla3DGUT<0>,
     CameraModelType::FISHEYE,
-    CameraDistortionType::ThinPrism,
+    CameraDistortionType::OpenCV,
     DistortionType::RGB_D,
     true,
     false
@@ -252,7 +252,7 @@ template void rasterize_to_pixels_eval3d_fwd_kernel_wrapper<
 template void rasterize_to_pixels_eval3d_fwd_kernel_wrapper<
     Vanilla3DGUT<0>,
     CameraModelType::FISHEYE,
-    CameraDistortionType::ThinPrism,
+    CameraDistortionType::OpenCV,
     DistortionType::RGB_D,
     false,
     true
@@ -287,7 +287,7 @@ template void rasterize_to_pixels_eval3d_fwd_kernel_wrapper<
 template void rasterize_to_pixels_eval3d_fwd_kernel_wrapper<
     Vanilla3DGUT<0>,
     CameraModelType::FISHEYE,
-    CameraDistortionType::ThinPrism,
+    CameraDistortionType::OpenCV,
     DistortionType::RGB_D,
     false,
     false

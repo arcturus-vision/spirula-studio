@@ -60,6 +60,7 @@ struct SlangDistortion<CameraDistortionType::TIER> {                            
 _SS_DEF_SLANG_DISTORTION(None,      _none)
 _SS_DEF_SLANG_DISTORTION(OpenCV,    _opencv)
 _SS_DEF_SLANG_DISTORTION(ThinPrism, _prism)
+_SS_DEF_SLANG_DISTORTION(KBPolarSpline, _polar)
 
 #undef _SS_DEF_SLANG_DISTORTION
 

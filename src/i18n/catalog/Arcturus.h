@@ -4,6 +4,9 @@ namespace spirula {
 namespace i18n {
 namespace msg {
 namespace arcturus {
+SS_MSG_EN(polar_grid, "Unsupported KBPolarSpline grid; expected 5 by 5");
+SS_MSG_EN(polar_scale, "Invalid KBPolarSpline scale");
+SS_MSG_EN(polar_coefficients, "Invalid KBPolarSpline coefficient count");
 SS_MSG_EN(err_import_one_arcturus_recording_per_dataset_tracking,
           "Import one Arcturus recording per dataset; tracking worlds from separate clips cannot "
           "be combined");
@@ -37,7 +40,7 @@ SS_MSG_EN(err_arcturus_capture_requires_two_calibrated_cameras,
 SS_MSG_EN(err_arcturus_camera_calibration_has_invalid_dimensions_or,
           "Arcturus camera calibration has invalid dimensions or focal lengths");
 SS_MSG_EN(err_arcturus_camera_has_no_public_kb4_calibration,
-          "Arcturus camera has no public KB4 calibration");
+          "Arcturus camera has no supported KB4 or KBPolarSpline calibration");
 SS_MSG_EN(err_truncated_arcturus_metadata_packet, "Truncated Arcturus metadata packet");
 SS_MSG_EN(err_unsupported_or_incomplete_arcturus_metadata_envelope,
           "Unsupported or incomplete Arcturus metadata envelope");

@@ -70,7 +70,7 @@ struct Camera {
     int    model = 0, tier = 0;      // CameraModelType / CameraDistortionType
     int    width = 0, height = 0;
     double fx = 0, fy = 0, cx = 0, cy = 0;
-    float  dist[8] = {};
+    float dist[58] = {};
     int    source_model = -1;        // data/SourceCamera.h; -1 = exact tier
     float  source_params[16] = {};
 };

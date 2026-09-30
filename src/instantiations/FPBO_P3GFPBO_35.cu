@@ -6,7 +6,7 @@
 
 template void fused_projection_bwd_optimizer_3dgs_kernel_wrapper<
     MipSplatting<1>,
-    CameraModelType::EQUIRECTANGULAR,
+    CameraModelType::PINHOLE,
     CameraDistortionType::None,
     true,
     false,
@@ -67,7 +67,7 @@ template void fused_projection_bwd_optimizer_3dgs_kernel_wrapper<
 
 template void fused_projection_bwd_optimizer_3dgs_kernel_wrapper<
     MipSplatting<1>,
-    CameraModelType::EQUIRECTANGULAR,
+    CameraModelType::PINHOLE,
     CameraDistortionType::None,
     false,
     true,
@@ -128,7 +128,7 @@ template void fused_projection_bwd_optimizer_3dgs_kernel_wrapper<
 
 template void fused_projection_bwd_optimizer_3dgs_kernel_wrapper<
     MipSplatting<1>,
-    CameraModelType::EQUIRECTANGULAR,
+    CameraModelType::PINHOLE,
     CameraDistortionType::None,
     false,
     true,
@@ -189,7 +189,7 @@ template void fused_projection_bwd_optimizer_3dgs_kernel_wrapper<
 
 template void fused_projection_bwd_optimizer_3dgs_kernel_wrapper<
     MipSplatting<1>,
-    CameraModelType::EQUIRECTANGULAR,
+    CameraModelType::PINHOLE,
     CameraDistortionType::None,
     false,
     false,
@@ -250,7 +250,7 @@ template void fused_projection_bwd_optimizer_3dgs_kernel_wrapper<
 
 template void fused_projection_bwd_optimizer_3dgs_kernel_wrapper<
     MipSplatting<1>,
-    CameraModelType::EQUIRECTANGULAR,
+    CameraModelType::PINHOLE,
     CameraDistortionType::None,
     false,
     false,
@@ -310,9 +310,9 @@ template void fused_projection_bwd_optimizer_3dgs_kernel_wrapper<
 );
 
 template void fused_projection_bwd_optimizer_3dgs_kernel_wrapper<
-    Vanilla3DGS<2>,
+    MipSplatting<1>,
     CameraModelType::PINHOLE,
-    CameraDistortionType::None,
+    CameraDistortionType::OpenCV,
     true,
     true,
     0
@@ -322,7 +322,7 @@ template void fused_projection_bwd_optimizer_3dgs_kernel_wrapper<
     const uint32_t C,
     const uint32_t N,
     const uint32_t num_sh_buffer,
-    Vanilla3DGS<2>::WorldBuffer splats_world,
+    MipSplatting<1>::WorldBuffer splats_world,
     const float *__restrict__ viewmats, // [C, 4, 4]
     const float4 *__restrict__ intrins,  // [C, 4], fx, fy, cx, cy
     const CameraDistortionCoeffsBuffer dist_coeffs_buffer,
@@ -333,11 +333,11 @@ template void fused_projection_bwd_optimizer_3dgs_kernel_wrapper<
     const int32_t *__restrict__ camera_ids,   // [nnz] -- ORIGINAL (unsorted) order
     const uint2 *__restrict__ aabb,    // [C, N] or [nnz], packed
     // grad outputs from rasterization
-    Vanilla3DGS<2>::WorldBuffer v_splats_world,
-    Vanilla3DGS<2>::ScreenBuffer v_splats_screen,
+    MipSplatting<1>::WorldBuffer v_splats_world,
+    MipSplatting<1>::ScreenBuffer v_splats_screen,
     // optimizer states
-    Vanilla3DGS<2>::WorldBuffer g1_splats_world,
-    Vanilla3DGS<2>::WorldBuffer g2_splats_world,
+    MipSplatting<1>::WorldBuffer g1_splats_world,
+    MipSplatting<1>::WorldBuffer g2_splats_world,
     const uint8_t* __restrict__ sh_packed,      // AoS (u, sqrt_g2) packed SH state
     float4* __restrict__ sh_quant_bounds,
     const uint8_t* __restrict__ sh_value_packed,
@@ -371,9 +371,9 @@ template void fused_projection_bwd_optimizer_3dgs_kernel_wrapper<
 );
 
 template void fused_projection_bwd_optimizer_3dgs_kernel_wrapper<
-    Vanilla3DGS<2>,
+    MipSplatting<1>,
     CameraModelType::PINHOLE,
-    CameraDistortionType::None,
+    CameraDistortionType::OpenCV,
     true,
     true,
     1
@@ -383,7 +383,7 @@ template void fused_projection_bwd_optimizer_3dgs_kernel_wrapper<
     const uint32_t C,
     const uint32_t N,
     const uint32_t num_sh_buffer,
-    Vanilla3DGS<2>::WorldBuffer splats_world,
+    MipSplatting<1>::WorldBuffer splats_world,
     const float *__restrict__ viewmats, // [C, 4, 4]
     const float4 *__restrict__ intrins,  // [C, 4], fx, fy, cx, cy
     const CameraDistortionCoeffsBuffer dist_coeffs_buffer,
@@ -394,11 +394,11 @@ template void fused_projection_bwd_optimizer_3dgs_kernel_wrapper<
     const int32_t *__restrict__ camera_ids,   // [nnz] -- ORIGINAL (unsorted) order
     const uint2 *__restrict__ aabb,    // [C, N] or [nnz], packed
     // grad outputs from rasterization
-    Vanilla3DGS<2>::WorldBuffer v_splats_world,
-    Vanilla3DGS<2>::ScreenBuffer v_splats_screen,
+    MipSplatting<1>::WorldBuffer v_splats_world,
+    MipSplatting<1>::ScreenBuffer v_splats_screen,
     // optimizer states
-    Vanilla3DGS<2>::WorldBuffer g1_splats_world,
-    Vanilla3DGS<2>::WorldBuffer g2_splats_world,
+    MipSplatting<1>::WorldBuffer g1_splats_world,
+    MipSplatting<1>::WorldBuffer g2_splats_world,
     const uint8_t* __restrict__ sh_packed,      // AoS (u, sqrt_g2) packed SH state
     float4* __restrict__ sh_quant_bounds,
     const uint8_t* __restrict__ sh_value_packed,
@@ -432,9 +432,9 @@ template void fused_projection_bwd_optimizer_3dgs_kernel_wrapper<
 );
 
 template void fused_projection_bwd_optimizer_3dgs_kernel_wrapper<
-    Vanilla3DGS<2>,
+    MipSplatting<1>,
     CameraModelType::PINHOLE,
-    CameraDistortionType::None,
+    CameraDistortionType::OpenCV,
     true,
     false,
     0
@@ -444,7 +444,7 @@ template void fused_projection_bwd_optimizer_3dgs_kernel_wrapper<
     const uint32_t C,
     const uint32_t N,
     const uint32_t num_sh_buffer,
-    Vanilla3DGS<2>::WorldBuffer splats_world,
+    MipSplatting<1>::WorldBuffer splats_world,
     const float *__restrict__ viewmats, // [C, 4, 4]
     const float4 *__restrict__ intrins,  // [C, 4], fx, fy, cx, cy
     const CameraDistortionCoeffsBuffer dist_coeffs_buffer,
@@ -455,11 +455,11 @@ template void fused_projection_bwd_optimizer_3dgs_kernel_wrapper<
     const int32_t *__restrict__ camera_ids,   // [nnz] -- ORIGINAL (unsorted) order
     const uint2 *__restrict__ aabb,    // [C, N] or [nnz], packed
     // grad outputs from rasterization
-    Vanilla3DGS<2>::WorldBuffer v_splats_world,
-    Vanilla3DGS<2>::ScreenBuffer v_splats_screen,
+    MipSplatting<1>::WorldBuffer v_splats_world,
+    MipSplatting<1>::ScreenBuffer v_splats_screen,
     // optimizer states
-    Vanilla3DGS<2>::WorldBuffer g1_splats_world,
-    Vanilla3DGS<2>::WorldBuffer g2_splats_world,
+    MipSplatting<1>::WorldBuffer g1_splats_world,
+    MipSplatting<1>::WorldBuffer g2_splats_world,
     const uint8_t* __restrict__ sh_packed,      // AoS (u, sqrt_g2) packed SH state
     float4* __restrict__ sh_quant_bounds,
     const uint8_t* __restrict__ sh_value_packed,
@@ -493,9 +493,9 @@ template void fused_projection_bwd_optimizer_3dgs_kernel_wrapper<
 );
 
 template void fused_projection_bwd_optimizer_3dgs_kernel_wrapper<
-    Vanilla3DGS<2>,
+    MipSplatting<1>,
     CameraModelType::PINHOLE,
-    CameraDistortionType::None,
+    CameraDistortionType::OpenCV,
     true,
     false,
     1
@@ -505,7 +505,7 @@ template void fused_projection_bwd_optimizer_3dgs_kernel_wrapper<
     const uint32_t C,
     const uint32_t N,
     const uint32_t num_sh_buffer,
-    Vanilla3DGS<2>::WorldBuffer splats_world,
+    MipSplatting<1>::WorldBuffer splats_world,
     const float *__restrict__ viewmats, // [C, 4, 4]
     const float4 *__restrict__ intrins,  // [C, 4], fx, fy, cx, cy
     const CameraDistortionCoeffsBuffer dist_coeffs_buffer,
@@ -516,11 +516,11 @@ template void fused_projection_bwd_optimizer_3dgs_kernel_wrapper<
     const int32_t *__restrict__ camera_ids,   // [nnz] -- ORIGINAL (unsorted) order
     const uint2 *__restrict__ aabb,    // [C, N] or [nnz], packed
     // grad outputs from rasterization
-    Vanilla3DGS<2>::WorldBuffer v_splats_world,
-    Vanilla3DGS<2>::ScreenBuffer v_splats_screen,
+    MipSplatting<1>::WorldBuffer v_splats_world,
+    MipSplatting<1>::ScreenBuffer v_splats_screen,
     // optimizer states
-    Vanilla3DGS<2>::WorldBuffer g1_splats_world,
-    Vanilla3DGS<2>::WorldBuffer g2_splats_world,
+    MipSplatting<1>::WorldBuffer g1_splats_world,
+    MipSplatting<1>::WorldBuffer g2_splats_world,
     const uint8_t* __restrict__ sh_packed,      // AoS (u, sqrt_g2) packed SH state
     float4* __restrict__ sh_quant_bounds,
     const uint8_t* __restrict__ sh_value_packed,

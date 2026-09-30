@@ -294,7 +294,7 @@ void model(const Reconstruction& rec, bool force, const PointColor& color) {
         put_u32(b, (uint32_t)c.width);
         put_u32(b, (uint32_t)c.height);
         put_u32(b, (uint32_t)camColmapId(c.model));
-        double ps[12] = {};
+        double ps[61] = {};
         packColmap(c, ps);
         const uint32_t np = (uint32_t)camColmapParams(c.model);
         put_u32(b, np);

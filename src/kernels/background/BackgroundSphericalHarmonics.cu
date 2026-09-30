@@ -272,6 +272,7 @@ static void _launch_bg_sh_backward(
         case CameraDistortionType::None:      BODY(CameraDistortionType::None);      break; \
         case CameraDistortionType::OpenCV:    BODY(CameraDistortionType::OpenCV);    break; \
         case CameraDistortionType::ThinPrism: BODY(CameraDistortionType::ThinPrism); break; \
+        case CameraDistortionType::KBPolarSpline: BODY(CameraDistortionType::KBPolarSpline); break; \
         default: throw std::runtime_error(                                         \
             "Unknown camera distortion: " + std::string(name));                    \
     } } while (0)

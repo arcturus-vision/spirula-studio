@@ -7,7 +7,7 @@
 template void rasterize_to_pixels_eval3d_bwd_kernel_wrapper<
     Vanilla3DGUT<0>,
     CameraModelType::EQUISOLID,
-    CameraDistortionType::ThinPrism,
+    CameraDistortionType::None,
     DistortionType::D,
     true,
     DensifyAccumMode::Sum,
@@ -59,7 +59,7 @@ template void rasterize_to_pixels_eval3d_bwd_kernel_wrapper<
 template void rasterize_to_pixels_eval3d_bwd_kernel_wrapper<
     Vanilla3DGUT<0>,
     CameraModelType::EQUISOLID,
-    CameraDistortionType::ThinPrism,
+    CameraDistortionType::None,
     DistortionType::D,
     true,
     DensifyAccumMode::Avg,
@@ -111,7 +111,7 @@ template void rasterize_to_pixels_eval3d_bwd_kernel_wrapper<
 template void rasterize_to_pixels_eval3d_bwd_kernel_wrapper<
     Vanilla3DGUT<0>,
     CameraModelType::EQUISOLID,
-    CameraDistortionType::ThinPrism,
+    CameraDistortionType::None,
     DistortionType::D,
     true,
     DensifyAccumMode::Avg,
@@ -163,7 +163,7 @@ template void rasterize_to_pixels_eval3d_bwd_kernel_wrapper<
 template void rasterize_to_pixels_eval3d_bwd_kernel_wrapper<
     Vanilla3DGUT<0>,
     CameraModelType::EQUISOLID,
-    CameraDistortionType::ThinPrism,
+    CameraDistortionType::None,
     DistortionType::D,
     false,
     DensifyAccumMode::None,
@@ -215,7 +215,7 @@ template void rasterize_to_pixels_eval3d_bwd_kernel_wrapper<
 template void rasterize_to_pixels_eval3d_bwd_kernel_wrapper<
     Vanilla3DGUT<0>,
     CameraModelType::EQUISOLID,
-    CameraDistortionType::ThinPrism,
+    CameraDistortionType::None,
     DistortionType::D,
     false,
     DensifyAccumMode::None,
@@ -267,7 +267,7 @@ template void rasterize_to_pixels_eval3d_bwd_kernel_wrapper<
 template void rasterize_to_pixels_eval3d_bwd_kernel_wrapper<
     Vanilla3DGUT<0>,
     CameraModelType::EQUISOLID,
-    CameraDistortionType::ThinPrism,
+    CameraDistortionType::None,
     DistortionType::D,
     false,
     DensifyAccumMode::Max,
@@ -319,7 +319,7 @@ template void rasterize_to_pixels_eval3d_bwd_kernel_wrapper<
 template void rasterize_to_pixels_eval3d_bwd_kernel_wrapper<
     Vanilla3DGUT<0>,
     CameraModelType::EQUISOLID,
-    CameraDistortionType::ThinPrism,
+    CameraDistortionType::None,
     DistortionType::D,
     false,
     DensifyAccumMode::Max,
@@ -371,7 +371,7 @@ template void rasterize_to_pixels_eval3d_bwd_kernel_wrapper<
 template void rasterize_to_pixels_eval3d_bwd_kernel_wrapper<
     Vanilla3DGUT<0>,
     CameraModelType::EQUISOLID,
-    CameraDistortionType::ThinPrism,
+    CameraDistortionType::None,
     DistortionType::D,
     false,
     DensifyAccumMode::Sum,
@@ -423,7 +423,7 @@ template void rasterize_to_pixels_eval3d_bwd_kernel_wrapper<
 template void rasterize_to_pixels_eval3d_bwd_kernel_wrapper<
     Vanilla3DGUT<0>,
     CameraModelType::EQUISOLID,
-    CameraDistortionType::ThinPrism,
+    CameraDistortionType::None,
     DistortionType::D,
     false,
     DensifyAccumMode::Sum,

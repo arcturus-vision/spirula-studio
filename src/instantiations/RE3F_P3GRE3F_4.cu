@@ -6,8 +6,8 @@
 
 template void rasterize_to_pixels_eval3d_fwd_kernel_wrapper<
     Vanilla3DGUT<0>,
-    CameraModelType::FISHEYE,
-    CameraDistortionType::None,
+    CameraModelType::PINHOLE,
+    CameraDistortionType::KBPolarSpline,
     DistortionType::None,
     true,
     true
@@ -41,8 +41,8 @@ template void rasterize_to_pixels_eval3d_fwd_kernel_wrapper<
 
 template void rasterize_to_pixels_eval3d_fwd_kernel_wrapper<
     Vanilla3DGUT<0>,
-    CameraModelType::FISHEYE,
-    CameraDistortionType::None,
+    CameraModelType::PINHOLE,
+    CameraDistortionType::KBPolarSpline,
     DistortionType::None,
     true,
     false
@@ -76,8 +76,8 @@ template void rasterize_to_pixels_eval3d_fwd_kernel_wrapper<
 
 template void rasterize_to_pixels_eval3d_fwd_kernel_wrapper<
     Vanilla3DGUT<0>,
-    CameraModelType::FISHEYE,
-    CameraDistortionType::None,
+    CameraModelType::PINHOLE,
+    CameraDistortionType::KBPolarSpline,
     DistortionType::None,
     false,
     true
@@ -111,8 +111,8 @@ template void rasterize_to_pixels_eval3d_fwd_kernel_wrapper<
 
 template void rasterize_to_pixels_eval3d_fwd_kernel_wrapper<
     Vanilla3DGUT<0>,
-    CameraModelType::FISHEYE,
-    CameraDistortionType::None,
+    CameraModelType::PINHOLE,
+    CameraDistortionType::KBPolarSpline,
     DistortionType::None,
     false,
     false
@@ -146,8 +146,8 @@ template void rasterize_to_pixels_eval3d_fwd_kernel_wrapper<
 
 template void rasterize_to_pixels_eval3d_fwd_kernel_wrapper<
     Vanilla3DGUT<0>,
-    CameraModelType::FISHEYE,
-    CameraDistortionType::None,
+    CameraModelType::PINHOLE,
+    CameraDistortionType::KBPolarSpline,
     DistortionType::D,
     true,
     true
@@ -181,8 +181,8 @@ template void rasterize_to_pixels_eval3d_fwd_kernel_wrapper<
 
 template void rasterize_to_pixels_eval3d_fwd_kernel_wrapper<
     Vanilla3DGUT<0>,
-    CameraModelType::FISHEYE,
-    CameraDistortionType::None,
+    CameraModelType::PINHOLE,
+    CameraDistortionType::KBPolarSpline,
     DistortionType::D,
     true,
     false
@@ -216,8 +216,8 @@ template void rasterize_to_pixels_eval3d_fwd_kernel_wrapper<
 
 template void rasterize_to_pixels_eval3d_fwd_kernel_wrapper<
     Vanilla3DGUT<0>,
-    CameraModelType::FISHEYE,
-    CameraDistortionType::None,
+    CameraModelType::PINHOLE,
+    CameraDistortionType::KBPolarSpline,
     DistortionType::D,
     false,
     true
@@ -251,8 +251,8 @@ template void rasterize_to_pixels_eval3d_fwd_kernel_wrapper<
 
 template void rasterize_to_pixels_eval3d_fwd_kernel_wrapper<
     Vanilla3DGUT<0>,
-    CameraModelType::FISHEYE,
-    CameraDistortionType::None,
+    CameraModelType::PINHOLE,
+    CameraDistortionType::KBPolarSpline,
     DistortionType::D,
     false,
     false
@@ -286,8 +286,8 @@ template void rasterize_to_pixels_eval3d_fwd_kernel_wrapper<
 
 template void rasterize_to_pixels_eval3d_fwd_kernel_wrapper<
     Vanilla3DGUT<0>,
-    CameraModelType::FISHEYE,
-    CameraDistortionType::None,
+    CameraModelType::PINHOLE,
+    CameraDistortionType::KBPolarSpline,
     DistortionType::RGB_D,
     true,
     true

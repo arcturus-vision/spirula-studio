@@ -84,12 +84,15 @@ void align_arcturus_dataset(const std::string &workspace, const std::string &ima
                 if (image.name.rfind(expected.prefix + "/", 0) != 0)
                     continue;
                 const auto &camera = model.cameras.at(image.camera_id);
-                if (camera.model != sfm::CamModel::OpenCVFisheye || expected.params.size() != 8)
+                sfm::CamModel expected_model;
+                if (!sfm::parseCamModelName(expected.model, expected_model) ||
+                    camera.model != expected_model ||
+                    expected.params.size() != (size_t)sfm::camColmapParams(camera.model))
                     throw std::runtime_error(
                         amsg::err_arcturus_reconstruction_did_not_preserve_the_fisheye.get());
-                double actual[8];
+                double actual[61];
                 sfm::packColmap(camera, actual);
-                for (int k = 2; k < 8; ++k)
+                for (size_t k = 2; k < expected.params.size(); ++k)
                     if (std::abs(actual[k] - expected.params[k]) > 1e-7)
                         throw std::runtime_error(
                             amsg::err_arcturus_reconstruction_changed_fixed_principal_point_or

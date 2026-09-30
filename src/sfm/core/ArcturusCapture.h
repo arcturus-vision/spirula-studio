@@ -8,6 +8,7 @@
 namespace sfm {
 
 struct ArcturusCamera {
+    std::string model = "opencv-fisheye";
     int width = 0, height = 0;
     std::vector<double> params;
 };

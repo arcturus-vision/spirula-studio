@@ -71,12 +71,18 @@ void calibration(const JsonValue &raw, ArcturusCapture &capture) {
     for (size_t i = 0; i < 2; ++i) {
         const auto &camera = cameras[i];
         const auto &intr = camera.has("intrinsics") ? field(camera, "intrinsics") : camera;
-        const auto candidates = intr.is_array() ? intr.arr : std::vector<JsonValue>{intr};
+        auto candidates = intr.is_array() ? intr.arr : std::vector<JsonValue>{intr};
+        std::stable_sort(candidates.begin(), candidates.end(), [](const auto &a, const auto &b) {
+            return (a.has("cameraModel") ? field(a, "cameraModel").as_string() : "") ==
+                       "kb_polar_spline" &&
+                   (b.has("cameraModel") ? field(b, "cameraModel").as_string() : "") !=
+                       "kb_polar_spline";
+        });
         bool found = false;
         for (const auto &c : candidates) {
             const std::string model =
                 c.has("cameraModel") ? field(c, "cameraModel").as_string() : "";
-            if (model != "kb" && model != "kb4")
+            if (model != "kb" && model != "kb4" && model != "kb_polar_spline")
                 continue;
             auto &dst = capture.cameras[i];
             dst.width = (int)number(field(c, c.has("width") ? "width" : "w"));
@@ -86,6 +92,26 @@ void calibration(const JsonValue &raw, ArcturusCapture &capture) {
             if (dst.width <= 0 || dst.height <= 0 || dst.params[0] <= 0 || dst.params[1] <= 0)
                 throw std::runtime_error(
                     amsg::err_arcturus_camera_calibration_has_invalid_dimensions_or.get());
+            if (model == "kb_polar_spline") {
+                const auto &grid = field(c, "gridSize");
+                if (!grid.is_array() || grid.arr.size() != 2 || number(grid.arr[0]) != 5 ||
+                    number(grid.arr[1]) != 5)
+                    throw std::runtime_error(amsg::polar_grid.get());
+                dst.model = "kb-polar-spline";
+                for (const char *key : {"nodeSpacingR", "scaledU", "scaledV"}) {
+                    double v = number(field(c, key));
+                    if (v <= 0)
+                        throw std::runtime_error(amsg::polar_scale.get());
+                    dst.params.push_back(v);
+                }
+                for (const char *key : {"sR", "sT"}) {
+                    const auto &knots = field(c, key);
+                    if (!knots.is_array() || knots.arr.size() != 25)
+                        throw std::runtime_error(amsg::polar_coefficients.get());
+                    for (const auto &v : knots.arr)
+                        dst.params.push_back(number(v));
+                }
+            }
             found = true;
             break;
         }
@@ -181,7 +207,7 @@ Manifest arcturus_manifest(const ArcturusCapture &capture, const std::string &pr
     for (int i = 0; i < 2; ++i) {
         ManifestCamera c;
         c.prefix = prefix + (prefix.empty() ? "" : "/") + "cam" + std::to_string(i);
-        c.model = "opencv-fisheye";
+        c.model = capture.cameras[i].model;
         c.params = capture.cameras[i].params;
         m.cameras.push_back(c);
     }

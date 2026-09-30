@@ -31,19 +31,22 @@ struct ModelDesc {
     const char* jac_entry;
 };
 static const ModelDesc kModels[] = {
-    {"snavely", 3, "cost_snavely", "jac_snavely"},                       // BAL, log-focal
-    {"snavely_f", 3, "cost_snavely_f", "jac_snavely_f"},                 // BAL, direct focal
-    {"pinhole_radial", 5, "cost_pinhole_radial", "jac_pinhole_radial"},  // COLMAP RADIAL
-    {"opencv", 8, "cost_opencv", "jac_opencv"},                          // COLMAP OPENCV (D29)
-    {"simple_pinhole", 3, "cost_simple_pinhole", "jac_simple_pinhole"},  // COLMAP SIMPLE_PINHOLE
-    {"pinhole", 4, "cost_pinhole", "jac_pinhole"},                       // COLMAP PINHOLE
-    {"opencv_fisheye", 8, "cost_opencv_fisheye", "jac_opencv_fisheye"},  // COLMAP OPENCV_FISHEYE (D29-C)
-    {"full_opencv", 12, "cost_full_opencv", "jac_full_opencv"},          // COLMAP FULL_OPENCV (D34)
-    {"thin_prism_fisheye", 12, "cost_thin_prism_fisheye", "jac_thin_prism_fisheye"},  // COLMAP THIN_PRISM_FISHEYE (D34)
-    {"equirect", 2, "cost_equirect", "jac_equirect"},                    // COLMAP EQUIRECTANGULAR (D49)
+    {"snavely", 3, "cost_snavely", "jac_snavely"},                      // BAL, log-focal
+    {"snavely_f", 3, "cost_snavely_f", "jac_snavely_f"},                // BAL, direct focal
+    {"pinhole_radial", 5, "cost_pinhole_radial", "jac_pinhole_radial"}, // COLMAP RADIAL
+    {"opencv", 8, "cost_opencv", "jac_opencv"},                         // COLMAP OPENCV (D29)
+    {"simple_pinhole", 3, "cost_simple_pinhole", "jac_simple_pinhole"}, // COLMAP SIMPLE_PINHOLE
+    {"pinhole", 4, "cost_pinhole", "jac_pinhole"},                      // COLMAP PINHOLE
+    {"opencv_fisheye", 8, "cost_opencv_fisheye",
+     "jac_opencv_fisheye"},                                     // COLMAP OPENCV_FISHEYE (D29-C)
+    {"full_opencv", 12, "cost_full_opencv", "jac_full_opencv"}, // COLMAP FULL_OPENCV (D34)
+    {"thin_prism_fisheye", 12, "cost_thin_prism_fisheye",
+     "jac_thin_prism_fisheye"},                       // COLMAP THIN_PRISM_FISHEYE (D34)
+    {"equirect", 2, "cost_equirect", "jac_equirect"}, // COLMAP EQUIRECTANGULAR (D49)
+    {"kb_polar_spline", 61, nullptr, nullptr},
 };
 static const int kNumModels = sizeof(kModels) / sizeof(kModels[0]);
-// 6 frame + 6 member extrinsic + up to 12 intrinsics; must match ba.slang. A
+// 6 frame + 6 member extrinsic + up to 12 free intrinsics; must match ba.slang. A
 // problem without rigs never exceeds kMaxPlainDof and pays for nothing wider.
 static const uint32_t kMaxCamDof = 24;
 static const uint32_t kMaxPlainDof = 18;
