@@ -279,6 +279,7 @@ bool extract_arcturus(const PrepJob &job, const PrepInput &input, const std::str
             png.read((char *)bytes.data(), size);
             if (!png)
                 throw std::runtime_error(amsg::err_cannot_read_decoded_arcturus_image.get());
+            png.close();
             unsigned char *rgb =
                 stbi_load_from_memory(bytes.data(), (int)bytes.size(), &w, &h, &n, 3);
             if (!rgb)
