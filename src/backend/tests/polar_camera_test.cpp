@@ -66,6 +66,11 @@ int main() {
                    jac[2][3];
             project(ray, expected);
             const float *row = rows.data() + (c * n + i) * SCR2_STRIDE;
+            if (std::hypot(row[SCR2_XY] - expected[0], row[SCR2_XY + 1] - expected[1]) > .002)
+                std::printf("camera=%d point=%d ray=(%.8g,%.8g,%.8g) "
+                            "gpu=(%.9g,%.9g) host=(%.9g,%.9g)\n",
+                            c, i, ray[0], ray[1], ray[2], row[SCR2_XY], row[SCR2_XY + 1],
+                            expected[0], expected[1]);
             max_pixel_error = std::max(max_pixel_error, std::hypot(row[SCR2_XY] - expected[0],
                                                                    row[SCR2_XY + 1] - expected[1]));
             for (int k = 0; k < 3; ++k) {

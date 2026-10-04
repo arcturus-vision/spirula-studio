@@ -301,7 +301,8 @@ struct DistKBPolarSpline : ICameraDistortion {
                 float nodes[4];
                 [ForceUnroll]
                 for (int j = 0; j < 4; ++j) {
-                    no_diff int col = ((c + j - 1) % 5 + 5) % 5;
+                    // Vulkan can lower negative remainder to unsigned modulo.
+                    no_diff int col = (c + j + 4) % 5;
                     nodes[j] = row < 2 ? 0 : coeffs[8 + axis*25 + (row-2)*5 + col];
                 }
                 rows[i] = cubic(nodes[0], nodes[1], nodes[2], nodes[3], theta - float(c));

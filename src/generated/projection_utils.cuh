@@ -1251,7 +1251,7 @@ inline __device__ float2  DistKBPolarSpline_distort_0(float2  uv_13, FixedArray<
     float2  rt_0 = _S265;
     FixedArray<float, 4>  rows_0;
     int _S266 = clamp_0(_S262 - int(1), int(0), int(6));
-    int col_0 = ((_S263 - int(1)) % int(5) + int(5)) % int(5);
+    int col_0 = (_S263 + int(4)) % int(5);
     FixedArray<float, 4>  nodes_0;
     bool _S267 = _S266 < int(2);
     float _S268;
@@ -1264,7 +1264,7 @@ inline __device__ float2  DistKBPolarSpline_distort_0(float2  uv_13, FixedArray<
         _S268 = (*coeffs_6)[int(8) + (_S266 - int(2)) * int(5) + col_0];
     }
     nodes_0[int(0)] = _S268;
-    int col_1 = ((_S263 + int(1) - int(1)) % int(5) + int(5)) % int(5);
+    int col_1 = (_S263 + int(1) + int(4)) % int(5);
     if(_S267)
     {
         _S268 = 0.0f;
@@ -1274,7 +1274,7 @@ inline __device__ float2  DistKBPolarSpline_distort_0(float2  uv_13, FixedArray<
         _S268 = (*coeffs_6)[int(8) + (_S266 - int(2)) * int(5) + col_1];
     }
     nodes_0[int(1)] = _S268;
-    int col_2 = ((_S263 + int(2) - int(1)) % int(5) + int(5)) % int(5);
+    int col_2 = (_S263 + int(2) + int(4)) % int(5);
     if(_S267)
     {
         _S268 = 0.0f;
@@ -1284,7 +1284,7 @@ inline __device__ float2  DistKBPolarSpline_distort_0(float2  uv_13, FixedArray<
         _S268 = (*coeffs_6)[int(8) + (_S266 - int(2)) * int(5) + col_2];
     }
     nodes_0[int(2)] = _S268;
-    int col_3 = ((_S263 + int(3) - int(1)) % int(5) + int(5)) % int(5);
+    int col_3 = (_S263 + int(3) + int(4)) % int(5);
     if(_S267)
     {
         _S268 = 0.0f;
@@ -1648,16 +1648,16 @@ inline __device__ DiffPair_vectorx3Cfloatx2C2x3E_0 s_fwd_DistKBPolarSpline_disto
     int2  _S308 = make_int2 (int(0));
     float2  rt_1 = make_float2 ((float)_S308.x, (float)_S308.y);
     int _S309 = clamp_0(_S306 - int(1), int(0), int(6));
-    int col_4 = ((_S307 - int(1)) % int(5) + int(5)) % int(5);
+    int col_4 = (_S307 + int(4)) % int(5);
     bool _S310 = _S309 < int(2);
     int _S311 = (_S309 - int(2)) * int(5);
     int _S312 = int(8) + _S311;
     float _S313 = (*coeffs_7)[_S312 + col_4];
-    int col_5 = ((_S307 + int(1) - int(1)) % int(5) + int(5)) % int(5);
+    int col_5 = (_S307 + int(1) + int(4)) % int(5);
     float _S314 = (*coeffs_7)[_S312 + col_5];
-    int col_6 = ((_S307 + int(2) - int(1)) % int(5) + int(5)) % int(5);
+    int col_6 = (_S307 + int(2) + int(4)) % int(5);
     float _S315 = (*coeffs_7)[_S312 + col_6];
-    int col_7 = ((_S307 + int(3) - int(1)) % int(5) + int(5)) % int(5);
+    int col_7 = (_S307 + int(3) + int(4)) % int(5);
     float _S316 = (*coeffs_7)[_S312 + col_7];
     float _S317 = theta_7 - float(_S307);
     int _S318 = clamp_0(_S306 + int(1) - int(1), int(0), int(6));
