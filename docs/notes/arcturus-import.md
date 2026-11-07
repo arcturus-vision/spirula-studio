@@ -9,7 +9,7 @@ supported calibration and tracking. When reconstruction succeeds, use
 
 The importer reads the recording's `gpmd` AVmf/AVmd `json/v1` metadata in C++.
 It retains both video tracks, separate calibrated intrinsics, each timestamp's stereo
-extrinsics, and tracking poses. By default, the frame-rate field controls uniform sampling
+extrinsics, and tracking poses. With I-frame selection disabled, the frame-rate field controls uniform sampling
 across the complete recording (at most 500 stereo instants). Lens guesses,
 sharpness selection and adaptive frame selection do not override that sampling.
 One recording is supported per dataset; separate recordings may have unrelated
@@ -17,14 +17,12 @@ tracking origins. The importer prefers `kb_polar_spline` when present and falls
 back to `kb` / `kb4`. A malformed polar calibration is rejected rather than
 silently replaced with an approximate model.
 
-Enable **Use recorded keyframes (Arcturus Vision Camera)** in video extraction
-settings to retain the recording's paired I-keyframes instead. This is useful
-for recordings that encode higher-quality keyframes. FPS, sharpness and adaptive
-spacing do not affect this mode. All paired keyframes are retained unless the
-maximum frame count is set; that limit selects a distributed subset of keyframes
-across the recording. At least three stereo instants with matching tracking
-poses are required. The importer verifies that both decoded images are keyframes
-at the requested timestamp. Ordinary videos keep their usual sampling behavior.
+**Only use I-frames** is enabled by default. FPS limits the sampling rate over
+paired codec keyframes; zero retains all eligible pairs. The maximum frame count
+then selects a distributed subset. Sharpness and adaptive spacing do not affect
+this mode. At least three paired instants with matching tracking poses are required.
+Decoding verifies an I-frame marked as a keyframe at the requested timestamp.
+Ordinary videos keep their usual sampling behavior.
 
 FFmpeg is required for video decoding and can be selected in Tool locations.
 No Python, COLMAP executable, or external reconstruction pipeline is used.
@@ -58,7 +56,7 @@ invalidates that marker until alignment succeeds. The original MP4 is never chan
 
 Native checks: `sfm_arcturus_test`, `sfm_telemetry_test`, and
 `arcturus_import_test RECORDING OUTPUT [MAX_STEREO_INSTANTS] [--keyframes]`.
-Use `0 --keyframes` to validate every paired keyframe.
+Use `0 --keyframes --fps 0` to validate every paired keyframe.
 The last executable drives the same extraction code as the GUI, with real FFmpeg
 decoding. It is a developer validation tool, not required by the application.
 
@@ -89,22 +87,41 @@ projection and numerical derivatives. The shared backend parity fixtures include
 nonzero polar splines. `sfm_arcturus_test` checks metadata selection, projection,
 inversion, BA Jacobians, and parameter serialization.
 
-## Paired validation
+## Import and training settings
 
-A single 200-view stereo recording supplied both KB4 (`OPENCV_FISHEYE`) and
-KBPolarSpline calibrations. This is not the separate Cartesian KBSpline model.
-Both reconstructions used identical images and fixed distortion; only focal
-lengths could refine. The spline registered 196 views versus 193, reduced mean
-reprojection error from 0.712 to 0.617 px, and reduced tracking-alignment RMS
-from 4.530 to 4.115 cm. Tracking agreement is not independent ground truth.
+The Arcturus Vision import preset is selected when supported recordings are
+detected. Explicit preset choices and restored settings take precedence.
+It uses both eyes, I-frames, pose-assisted pair selection, fixed distortion, and
+a 130-degree full-angle mask. Left-only and right-only imports retain the selected
+eye's calibration and tracking. FPS remains editable when selecting the preset.
 
-With 167 common training views, 26 timestamp-held-out views, 7,000 iterations,
-1232-square images and a one-million-splat cap, KBPolarSpline improved held-out
-PSNR from 16.31 to 17.31 dB and SSIM from 0.6496 to 0.6690. Each model used its
-own reconstruction and sparse seed cloud; held-out images participated in SfM
-but not splat training. These single-recording results measure the end-to-end
-pipeline, not the spline in isolation or a universal quality improvement.
+Each mask is computed from the recorded KB4 or KBPolarSpline calibration and
+intersected with segmentation or editor masks. It applies to feature matching and
+training without requiring segmentation weights. Changing eyes rebuilds frames;
+changing the mask angle rebuilds masks and masked reconstruction.
 
-Evaluation fetches each view by index so disk prefetch cannot repeat views
-across epoch boundaries. Resume excludes the separately stored DC term from
-the SH layout count, preserving saved renders without unnecessary adaptation.
+The separate training preset uses SH0, 30,000 iterations, a 1.5 million Gaussian
+cap, and half-width/half-height images. It ignores masked pixels and preserves
+native camera projection and the metric tracking frame. Opening a supported dataset
+selects it only when no explicit training preset or edited settings take precedence.
+Checkpoint resumes retain their saved settings.
+
+## Pair selection and navigation
+
+Native stereo manifests include `stereo_groups`. Selection scores one eye per
+instant and expands selected links to both eyes. `--no-stereo-selection` disables
+this grouping. `--tracking-selection` uses recorded poses to shortlist candidates,
+with independent visual audit pairs and normal matching and geometric verification.
+Missing poses use visual selection. Weak or disconnected matches, inadequate image
+coverage, or poor reconstruction agreement trigger a full visual search.
+The GUI exposes this as **Use dataset poses to speed up image-pair selection**.
+
+Aligned models record `up_axis 0 -1 0` in `sparse/0/gauge.txt`. Legacy imports use
+the `.arcturus-aligned` marker to recover this navigation direction. Viewers carry
+it through normalization and placement; display rotation adjusts live-preview
+navigation without rotating calibrated images or reconstructed geometry.
+
+Additional checks: `navigation_frame_test`, `polar_frustum_test`,
+`dataset_plan_test`, `preset_roundtrip_test`, and
+`arcturus_import_test --mask-test`. Real-recording tests also accept
+`--eye both|left|right` and `--with-mask`.

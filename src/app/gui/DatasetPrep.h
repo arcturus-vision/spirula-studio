@@ -156,6 +156,7 @@ struct PrepInput {
     // resolved per camera folder when it asks for the border to be fitted
     // (app::FrameStencil), which is what gives a dual-fisheye file two circles.
     app::FrameStencil stencil;
+    bool arcturus_detected = false; // Derived from telemetry, not a preset setting.
 };
 
 // One row of the "Camera / lens per input" list. `rel` is the prefix
@@ -276,7 +277,9 @@ struct PrepJob {
     // Kept frames per second, 0 = every frame; PrepInput::fps overrides it
     // per video.
     float video_fps = 2.0f;
-    bool arcturus_keyframes = false;
+    int arcturus_mask_degrees = 130;
+    bool arcturus_keyframes = true;
+    int arcturus_eye = 0;            // 0 both, 1 left (cam0), 2 right (cam1)
     // Space them by view change rather than by time (app/FrameMotion.h): the
     // rate above becomes the average and stays within `adaptive_range` of it.
     bool  adaptive_fps = false;

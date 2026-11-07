@@ -1,5 +1,6 @@
 #include "data/Json.h"
 #include "sfm/core/ArcturusCapture.h"
+#include "sfm/feature/TrackingSelection.h"
 #include "sfm/core/Model.h"
 #include "sfm/ba/CpuCamera.h"
 #include "sfm/core/Telemetry.h"
@@ -100,6 +101,68 @@ void polar_test() {
     require(std::abs(out[0]) < 1e-12 && std::abs(out[1] - 2) < 1e-12, "angular knot rotation");
 }
 
+void tracking_selection_test() {
+    std::vector<std::string> names;
+    sfm::ArcturusPoseMap targets;
+    for (int eye = 0; eye < 2; ++eye)
+        for (int i = 0; i < 40; ++i) {
+            const std::string name = "cam" + std::to_string(eye) + "/" +
+                                     std::to_string(1000 + i) + ".jpg";
+            names.push_back(name);
+            const double a = i * .2;
+            targets[name] = {{sfm::mat3Identity(), {std::cos(a), 0., std::sin(a)}}, 0.};
+        }
+    const auto stereo = sfm::stereoSelection(names, {{{"cam0", "cam1"}}});
+    const auto selected = sfm::trackingSelection(names, stereo, targets);
+    require(selected.usable && !selected.audit.empty(), "tracking shortlist and independent audit");
+    require(selected.pairs == sfm::trackingSelection(names, stereo, targets).pairs,
+            "deterministic tracking shortlist");
+    for (uint32_t i = 0; i < 40; ++i)
+        require(std::binary_search(selected.pairs.begin(), selected.pairs.end(),
+                                   std::make_pair(i, i + 40)), "both-eye same-time matching");
+    for (int eye = 0; eye < 2; ++eye) {
+        const std::vector<std::string> mono(names.begin() + 40 * eye, names.begin() + 40 * (eye + 1));
+        const auto mono_selection = sfm::trackingSelection(mono, sfm::stereoSelection(mono, {}), targets);
+        require(mono_selection.usable && !mono_selection.audit.empty(),
+                "either single eye supports pose-guided selection");
+        for (const auto& pair : mono_selection.pairs)
+            require(pair.first < mono.size() && pair.second < mono.size(), "single-eye pair bounds");
+    }
+    sfm::ArcturusCapture capture;
+    for (int eye = 1; eye <= 2; ++eye) {
+        const auto manifest = sfm::arcturus_manifest(capture, "clip", eye);
+        require(manifest.cameras.size() == 1 && manifest.stereo_groups.empty() &&
+                manifest.cameras[0].prefix == "clip/cam" + std::to_string(eye - 1),
+                "single-eye manifest preserves the selected camera identity");
+    }
+    targets.erase(names[0]);
+    require(!sfm::trackingSelection(names, stereo, targets).usable, "missing tracking falls back");
+    targets[names[0]] = {{sfm::mat3Identity(), {1., 0., 0.}}, 0.};
+    std::atomic<bool> cancel{true};
+    sfm::cancel::set_token(&cancel);
+    bool cancelled = false;
+    try { (void)sfm::trackingSelection(names, stereo, targets); }
+    catch (const sfm::Cancelled&) { cancelled = true; }
+    sfm::cancel::set_token(nullptr);
+    require(cancelled, "tracking selection cancellation");
+    sfm::MatchesDatabase db;
+    for (const auto& name : names) db.images.push_back({name, 100});
+    for (const auto& edge : selected.pairs) {
+        sfm::TwoViewMatches p;
+        p.image1 = edge.first; p.image2 = edge.second; p.matches.resize(50);
+        db.pairs.push_back(p);
+    }
+    require(sfm::trackingGraphHealthy(db, selected), "healthy verified tracking graph");
+    auto weak = db;
+    weak.pairs.erase(std::remove_if(weak.pairs.begin(), weak.pairs.end(), [](const auto& p) {
+        return p.image1 == 0 || p.image2 == 0 || p.image1 == 1 || p.image2 == 1;
+    }), weak.pairs.end());
+    require(!sfm::trackingGraphHealthy(weak, selected), "weak or disconnected graph expands");
+    for (auto& p : db.pairs)
+        if (selected.audit.count({p.image1, p.image2})) p.matches.resize(200);
+    require(!sfm::trackingGraphHealthy(db, selected), "strong missed audit links expand");
+}
+
 void alignment_test() {
     namespace fs = std::filesystem;
     const auto root = fs::temp_directory_path() /
@@ -142,6 +205,9 @@ void alignment_test() {
     m.points3D[1] = point;
     m.writeBinary((root / "sparse/0").string());
     sfm::align_arcturus_dataset(root.string(), (root / "images").string());
+    std::ifstream gauge(root / "sparse/0/gauge.txt");
+    const std::string gauge_text((std::istreambuf_iterator<char>(gauge)), {});
+    require(gauge_text.find("up_axis 0 -1 0\n") != std::string::npos, "tracking navigation up");
     auto aligned = sfm::Reconstruction::readBinary((root / "sparse/0").string());
     require((aligned.points3D.at(1).xyz - sfm::transformPoint(truth, point.xyz)).norm() < 1e-7,
             "metric points");
@@ -171,6 +237,7 @@ void alignment_test() {
 int main(int argc, char **argv) {
     try {
         polar_test();
+        tracking_selection_test();
         if (argc == 4 && std::string(argv[1]) == "--align") {
             sfm::align_arcturus_dataset(argv[2], argv[3]);
             std::cout << "Native Arcturus alignment complete\n";
@@ -213,6 +280,14 @@ int main(int argc, char **argv) {
         auto key_picked = sfm::select_arcturus_keyframes(synthetic, keys, 0, .05);
         require(key_picked.size() == 4 && key_picked[2].time == .5,
                 "paired keyframes ignore unmatched eye frames");
+        auto spaced = sfm::select_arcturus_keyframes(synthetic, keys, 0, .05, 2.5);
+        require(spaced.size() == 3 && spaced[1].time == .5 && spaced[2].time == .9,
+                "FPS limits eligible stereo keyframes without substituting ordinary frames");
+        rejected = false;
+        try {
+            sfm::select_arcturus_keyframes(synthetic, keys, 0, .05, 1.);
+        } catch (...) { rejected = true; }
+        require(rejected, "insufficient keyframes at requested FPS never silently oversample");
         key_picked = sfm::select_arcturus_keyframes(synthetic, keys, 3, .05);
         require(key_picked.size() == 3 && key_picked.front().time == 0 &&
                     key_picked.back().time == .9,

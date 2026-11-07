@@ -433,6 +433,7 @@ struct TrainConfig {
 struct TrainPresetInfo { const char* name; };
 inline constexpr TrainPresetInfo kTrainPresets[] = {
     {"3dgs"},
+    {"arcturus-vision"},
     {"360-camera"},
     {"in-the-wild"},
     {"centered-object"},
@@ -444,6 +445,23 @@ inline constexpr TrainPresetInfo kTrainPresets[] = {
 
 inline bool train_apply_preset(TrainConfig& c, const std::string& name) {
     if (name == "3dgs") {
+        return true;
+    }
+    if (name == "arcturus-vision") {
+        c.sh_degree = 0;
+        c.num_iterations = 30000;
+        c.cap_max = 1500000;
+        c.train_resolution_divisor = 2.0f;
+        c.load_masks = true;
+        c.mask_boundary_offset = 0.0f;
+        c.apply_loss_for_mask = false;
+        c.warp_to_pinhole = false;
+        c.warp_spherical_to_pinhole = false;
+        c.orientation_method = "none";
+        c.center_method = "none";
+        c.auto_scale_poses = false;
+        c.scene_center = "none";
+        c.relative_scale = 1.0f;
         return true;
     }
     if (name == "360-camera") {

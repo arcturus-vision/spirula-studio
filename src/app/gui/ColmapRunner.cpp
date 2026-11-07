@@ -252,6 +252,8 @@ void ColmapRunner::take_reconstruction(ColmapJob& job) {
     const float fps = job.video_fps;
     const bool adaptive = job.adaptive_fps;
     const bool keyframes = job.arcturus_keyframes;
+    const int eye = job.arcturus_eye;
+    const int mask_degrees = job.arcturus_mask_degrees;
     const float range = job.adaptive_range;
     const int sharp = job.sharp_window, maxf = job.max_frames;
     const bool skip_blurry = job.skip_blurry;
@@ -266,6 +268,8 @@ void ColmapRunner::take_reconstruction(ColmapJob& job) {
     job.video_fps = fps;
     job.adaptive_fps = adaptive;
     job.arcturus_keyframes = keyframes;
+    job.arcturus_eye = eye;
+    job.arcturus_mask_degrees = mask_degrees;
     job.adaptive_range = range;
     job.sharp_window = sharp;
     job.skip_blurry = skip_blurry;
@@ -457,6 +461,8 @@ PrepJob ColmapRunner::prep_job(const ColmapJob& job) {
     pj.inference_devices = job.inference_devices;
     pj.video_fps = job.video_fps;
     pj.arcturus_keyframes = job.arcturus_keyframes;
+    pj.arcturus_eye = job.arcturus_eye;
+    pj.arcturus_mask_degrees = job.arcturus_mask_degrees;
     pj.adaptive_fps = job.adaptive_fps;
     pj.adaptive_range = job.adaptive_range;
     pj.sharp_window = job.sharp_window;

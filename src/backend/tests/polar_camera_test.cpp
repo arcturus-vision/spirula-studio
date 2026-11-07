@@ -43,7 +43,7 @@ int main() {
                                                DeviceTensorFloatND(view(put(colors), {n, 3, 1})),
                                                DeviceTensorFloatND(view(put(sh), {n, 45, 1}))};
     auto result = projection_3dgs_forward(
-        n, 0, splats, view(put(vm), {cameras, 16}), view(put(intr), {cameras, 4}), 2464, 2464,
+        n, ColorBasis{}, splats, view(put(vm), {cameras, 16}), view(put(intr), {cameras, 4}), 2464, 2464,
         "FISHEYE", "KB_POLAR_SPLINE", view(put(dist), {cameras, kCameraDistortionParams}),
         DeviceVector<float>(view(put(std::vector<float>(n, 0)), {n, 1})), std::nullopt,
         std::nullopt, 0, 32, 0);

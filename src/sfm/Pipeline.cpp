@@ -9,6 +9,9 @@
 // still be replaced by COLMAP's equivalent to bisect a failure.
 
 #include "sfm/Pipeline.h"
+#include "sfm/feature/StereoSelection.h"
+#include "sfm/feature/TrackingSelection.h"
+#include "i18n/catalog/Arcturus.h"
 
 #include <algorithm>
 #include <array>
@@ -2039,6 +2042,31 @@ int matchFeatureDir(const std::string& featdir, const SfmConfig& cfg, PairMode m
     TelemetryPriors* priors = calib ? calib->priors.get() : nullptr;
     const PriorSource* placed = calib ? calib->positionPriors() : nullptr;
 
+    const auto stereo = stereoSelection(image_names,
+        cfg.stereo_selection ? cfg.stereo_groups : std::vector<SequenceDef>{});
+    const size_t selection_images = stereo.representatives.size();
+    if (selection_images < n_images)
+        L::err(Tag::Match, M::match_stereo_selection,
+               {(long long)n_images, (long long)selection_images});
+    TrackingSelection tracking;
+    const double tracking_begin = now();
+    if (cfg.tracking_selection && cfg.stereo_groups.size() <= 1 &&
+        mode == PairMode::Prefilter && calib && !calib->image_dir.empty()) {
+        try {
+            auto tracked_names = image_names;
+            const auto real_names = imageStemMap(calib->image_dir);
+            for (auto& name : tracked_names)
+                if (const auto found = real_names.find(name); found != real_names.end())
+                    name = found->second;
+            tracking = trackingSelection(tracked_names, stereo, read_arcturus_poses(calib->image_dir));
+        } catch (const Cancelled&) { throw; }
+        catch (const std::exception&) {}
+    }
+    stats.tracking_used = tracking.usable;
+    if (tracking.usable) {
+        stats.select_seconds = now() - tracking_begin;
+        L::diag(Tag::Match, "[tracking] shortlist preparation: %.6f s", stats.select_seconds);
+    }
     std::vector<std::pair<uint32_t, uint32_t>> pairs;
     // Pair selection is minutes on a large capture and used to look like a
     // frozen program between the two stages that have a bar; it reports through
@@ -2059,11 +2087,15 @@ int matchFeatureDir(const std::string& featdir, const SfmConfig& cfg, PairMode m
         res && resume::readPairs(res->dir / "pairs.bin", res->signature, pairs);
     if (reused_pairs) {
         L::out(Tag::Match, M::match_reusing_pairs, {(long long)pairs.size()});
+    } else if (tracking.usable) {
+        pairs = tracking.pairs;
+        L::out(Tag::Match, spirula::i18n::msg::arcturus::tracking_selected,
+               {(long long)pairs.size(), (long long)tracking.audit.size()});
     } else if (mode == PairMode::Prefilter) {
         stats.scored = n_images * (n_images - 1) / 2;
         double t0 = now();
-        events::stage_begin(Stage::Select, (int64_t)(n_images * (n_images - 1)));
-        pairs = prefilterPairs(feats, popt, sp);
+        events::stage_begin(Stage::Select, (int64_t)(selection_images * (selection_images - 1)));
+        pairs = stereoPrefilterPairs(feats, stereo, popt, sp);
         events::stage_end(Stage::Select);
         stats.select_seconds = now() - t0;
         if (verbose)
@@ -2099,8 +2131,8 @@ int matchFeatureDir(const std::string& featdir, const SfmConfig& cfg, PairMode m
             const size_t seq = pairs.size();
             stats.scored = n_images * (n_images - 1) / 2;
             double t0 = now();
-            events::stage_begin(Stage::Select, (int64_t)(n_images * (n_images - 1)));
-            std::vector<std::pair<uint32_t, uint32_t>> extra = prefilterPairs(feats, popt, sp);
+            events::stage_begin(Stage::Select, (int64_t)(selection_images * (selection_images - 1)));
+            std::vector<std::pair<uint32_t, uint32_t>> extra = stereoPrefilterPairs(feats, stereo, popt, sp);
             events::stage_end(Stage::Select);
             stats.select_seconds = now() - t0;
             pairs.insert(pairs.end(), extra.begin(), extra.end());
@@ -2541,6 +2573,17 @@ int matchFeatureDir(const std::string& featdir, const SfmConfig& cfg, PairMode m
             }
         }
     }
+    if (verify && tracking.usable && !trackingGraphHealthy(db, tracking)) {
+        L::out(Tag::Match, spirula::i18n::msg::arcturus::tracking_expand);
+        cancel::check();
+        SfmConfig full = cfg;
+        full.tracking_selection = false;
+        matcher.reset();
+        db = MatchesDatabase();
+        feats.clear();
+        stats = MatchStats();
+        return matchFeatureDir(featdir, full, mode, verify, feats, db, stats, calib, nullptr);
+    }
     stats.kept = db.pairs.size();
     return 0;
 }
@@ -2548,7 +2591,7 @@ int matchFeatureDir(const std::string& featdir, const SfmConfig& cfg, PairMode m
 // `auto`
 // ---------------------------------------------------------------------------
 
-AutoResult run_auto(SfmConfig& cfg, const AutoInputs& in) {
+static AutoResult runAutoImpl(SfmConfig& cfg, const AutoInputs& in, double previous_seconds) {
     AutoResult r;
     std::string _imagedir = in.image_dir;
     const std::string& _workspace = in.workspace;
@@ -2678,6 +2721,23 @@ AutoResult run_auto(SfmConfig& cfg, const AutoInputs& in) {
     VerifyCalibration calib;
     calib.setup = cfg.camera;
     calib.image_dir = _imagedir;
+    cfg.tracking_pose_signature.clear();
+    if (cfg.tracking_selection) {
+        try {
+            std::ostringstream signature;
+            signature << std::setprecision(17);
+            for (const auto& [name, target] : read_arcturus_poses(_imagedir)) {
+                signature << name.size() << ':' << name;
+                for (double v : target.first.R) signature << ' ' << v;
+                signature << ' ' << target.first.t.x << ' ' << target.first.t.y << ' '
+                          << target.first.t.z << '\n';
+            }
+            cfg.tracking_pose_signature = signature.str();
+        } catch (const std::exception&) {
+            cfg.tracking_selection = false;
+            L::out(Tag::Match, spirula::i18n::msg::arcturus::tracking_expand);
+        }
+    }
     const SensorCaptures sensors = loadSensorCaptures(cfg, verbose);
     applyMetricGpsAuto(cfg, sensors, _imagedir);
     calib.sensors = &sensors;
@@ -2744,6 +2804,9 @@ AutoResult run_auto(SfmConfig& cfg, const AutoInputs& in) {
                 db.sensor_calibration = std::move(disk.sensor_calibration);
                 db.sensor_calibration_fingerprint = disk.sensor_calibration_fingerprint;
                 loadCameraSetup(db, calib.cameras);
+                mstats.tracking_used = cfg.tracking_selection && mode == PairMode::Prefilter &&
+                                       cfg.stereo_groups.size() <= 1 &&
+                                       !cfg.tracking_pose_signature.empty();
                 mstats.images = feats.size();
                 mstats.kept = mstats.pairs = db.pairs.size();
                 for (const TwoViewMatches& tvm : db.pairs) mstats.inliers += tvm.matches.size();
@@ -2863,6 +2926,51 @@ AutoResult run_auto(SfmConfig& cfg, const AutoInputs& in) {
     events::stage_end(Stage::Map);
 
     resolveImageNames(models, _imagedir);
+    if (mstats.tracking_used) {
+        bool healthy = models.size() == 1 && models.front().numRegistered() * 100 >= est.images * 99;
+        if (healthy) {
+            double mean = 0, median = 0;
+            size_t observations = 0;
+            reprojStats(models.front(), feats, mean, median, observations);
+            healthy = observations > 0 && std::isfinite(mean) && mean <= 1.5;
+            const auto targets = read_arcturus_poses(_imagedir);
+            std::vector<Vec3> src, dst;
+            std::vector<const Image*> registered;
+            for (const auto& [id, image] : models.front().images) {
+                if (!image.registered) continue;
+                const auto found = targets.find(image.name);
+                if (found == targets.end()) { healthy = false; break; }
+                registered.push_back(&image);
+                src.push_back(cameraCenter(image.pose));
+                dst.push_back(found->second.first.t);
+            }
+            Sim3 alignment;
+            if (src.size() < 3 || !estimateSim3(src, dst, alignment)) healthy = false;
+            else {
+                double squared = 0, extent = 0;
+                std::vector<double> angles;
+                for (size_t i = 0; i < src.size(); ++i) {
+                    const Vec3 delta = transformPoint(alignment, src[i]) - dst[i];
+                    squared += delta.dot(delta);
+                    extent = std::max(extent, (dst[i] - dst.front()).norm());
+                    const Mat3 predicted = mul(alignment.R, transpose(registered[i]->pose.R));
+                    const Mat3 error = mul(transpose(targets.at(registered[i]->name).first.R), predicted);
+                    angles.push_back(rotationToAngleAxis(error).norm());
+                }
+                std::sort(angles.begin(), angles.end());
+                healthy = healthy && std::sqrt(squared / src.size()) <= std::max(.05, .02 * extent) &&
+                          angles[(angles.size() - 1) * 95 / 100] <= 5. * 3.141592653589793 / 180.;
+            }
+        }
+        L::diag(Tag::Match, "[tracking] reconstruction audit: %s", healthy ? "passed" : "expand");
+        if (!healthy) {
+            L::out(Tag::Match, spirula::i18n::msg::arcturus::tracking_expand);
+            cancel::check();
+            SfmConfig full = cfg;
+            full.tracking_selection = false;
+            return runAutoImpl(full, in, previous_seconds + t_extract + t_match + t_map);
+        }
+    }
     std::vector<ModelGauge> gauge;
     const bool auto_metric = fixGauge(models, cfg, _imagedir, verbose, gauge, &sensors, mapped);
     recolorPoints(models, cfg);
@@ -2919,7 +3027,7 @@ AutoResult run_auto(SfmConfig& cfg, const AutoInputs& in) {
     printFolderCoverage(models, db);
     writeUnregisteredList(models, db, _imagedir);
     L::out(Tag::Run, M::sum_total,
-           {format_duration(t_extract + t_match + t_map)});
+           {format_duration(previous_seconds + t_extract + t_match + t_map)});
     L::out(Tag::Run, M::sum_model_error,
            {L::num(mean, 3), L::num(median, 3), (long long)nobs});
     if (models.size() > 1) {
@@ -2979,6 +3087,10 @@ AutoResult run_auto(SfmConfig& cfg, const AutoInputs& in) {
         L::out(Tag::Run, M::result_ok, {L::num(100 * frac, 0), L::num(mean, 2)});
     r.exit_code = partial ? 3 : (auto_metric ? 0 : 4);
     return r;
+}
+
+AutoResult run_auto(SfmConfig& cfg, const AutoInputs& in) {
+    return runAutoImpl(cfg, in, 0.);
 }
 
 // ---------------------------------------------------------------------------

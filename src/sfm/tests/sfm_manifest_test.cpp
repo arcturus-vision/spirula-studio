@@ -118,7 +118,9 @@ static int cmdManifestTest(int, char**) {
                "        rotation: [0, 0, 1, 0]\n"
                "        translation: [0.03, 0, 0]\n"
                "        fixed: false\n"
-               "  - members: [left, right]\n");
+               "  - members: [left, right]\n"
+               "stereo_groups:\n"
+               "  - members: [cam0, cam1]\n");
     Manifest m = manifest_read(yml);
     check(m.rigs.size() == 2 && m.rigs[0].name == "dual" && m.rigs[0].captures.size() == 2,
           "a rig with its captures");
@@ -134,6 +136,9 @@ static int cmdManifestTest(int, char**) {
     check(m.image_dir == "pics", "image_dir is kept as the file spells it");
     check(m.base_dir == dir, "and the manifest's own directory with it");
     check(m.camera_mode == "single", "camera_mode");
+    check(m.stereo_groups.size() == 1 &&
+          m.stereo_groups[0].members == std::vector<std::string>({"cam0", "cam1"}),
+          "stereo selection groups are independent of constrained rigs and mapper sequences");
     check(m.cameras.size() == 2, "two camera groups");
     check(m.cameras[1].prefix == "cam0" && m.cameras[1].distortion.size() == 2,
           "the group's lens and distortion");
@@ -151,6 +156,25 @@ static int cmdManifestTest(int, char**) {
     SfmConfig cfg;
     std::string image_dir;
     check(manifest_apply(m, cfg, {}, image_dir).empty(), "apply succeeds");
+    check(cfg.stereo_groups.size() == 1 && cfg.sequences.empty(),
+          "stereo selection does not constrain mapper poses or sequence ordering");
+    const auto stereo_signature = stageSignature(cfg, CMD_MATCH);
+    SfmConfig tracking_cfg = cfg;
+    tracking_cfg.tracking_selection = true;
+    tracking_cfg.tracking_pose_signature = "pose-a";
+    const auto tracked_signature = stageSignature(tracking_cfg, CMD_MATCH);
+    check(tracked_signature != stereo_signature, "tracking selection invalidates matches");
+    tracking_cfg.tracking_pose_signature = "pose-b";
+    check(stageSignature(tracking_cfg, CMD_MATCH) != tracked_signature,
+          "changed tracking invalidates matches");
+    auto all_eye_cfg = cfg;
+    all_eye_cfg.stereo_selection = false;
+    check(stageSignature(all_eye_cfg, CMD_MATCH) != stereo_signature,
+          "switching selection mode invalidates cached matches");
+    all_eye_cfg = cfg;
+    all_eye_cfg.stereo_groups[0].members[1] = "other";
+    check(stageSignature(all_eye_cfg, CMD_MATCH) != stereo_signature,
+          "changing the stereo pairing invalidates cached matches");
     check(image_dir == (std::filesystem::path(dir) / "pics").string(),
           "a relative image_dir resolves against the manifest");
     check(cfg.camera_model == "opencv", "the dataset-wide entry sets --camera-model");

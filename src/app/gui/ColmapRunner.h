@@ -103,7 +103,9 @@ struct ColmapJob {
 
     // Video extraction
     float video_fps = 2.0f;              // kept frames per second
-    bool arcturus_keyframes = false;
+    int arcturus_mask_degrees = 130;
+    bool arcturus_keyframes = true;
+    int arcturus_eye = 0;            // 0 both, 1 left (cam0), 2 right (cam1)
     bool adaptive_fps = false;           // see PrepJob
     float adaptive_range = 4.0f;
     int sharp_window = 3;                // pick sharpest of N candidates (1 = off)

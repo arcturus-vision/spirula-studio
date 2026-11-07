@@ -76,7 +76,9 @@ bool undistort_lens(double u, double v, int tier, const float* d, double out[2])
         double f[2], J[4];
         distort_lens(qx, qy, tier, d, f);
         distort_jac(qx, qy, tier, d, J);
-        double det = J[0]*J[3] - J[2]*J[1];
+        double det = J[0] * J[3] - J[2] * J[1];
+        if (!std::isfinite(det) || !std::isfinite(f[0]) || !std::isfinite(f[1]))
+            return false;
         if (std::fabs(det) < 1e-12) break;
         double rx = f[0] - u, ry = f[1] - v, inv = 1/det;
         qx -= ( J[3]*rx - J[2]*ry)*inv;
@@ -86,7 +88,8 @@ bool undistort_lens(double u, double v, int tier, const float* d, double out[2])
     double J[4], f[2];
     distort_jac(qx, qy, tier, d, J);
     double det = J[0]*J[3] - J[2]*J[1];
-    if (std::fmin(det, std::fmin(J[0], J[3])) <= 0) return false;   // folded
+    if (!std::isfinite(det) || std::fmin(det, std::fmin(J[0], J[3])) <= 0)
+        return false; // folded
     distort_lens(qx, qy, tier, d, f);
     if (std::hypot(f[0]-u, f[1]-v) >= 0.01) return false;
     out[0] = qx; out[1] = qy;

@@ -28,6 +28,8 @@ namespace {
     X("use_found_masks",            use_found_masks)                          \
     X("flip_found_masks",           sfm.prep.flip_found_masks)                \
     X("video_fps",                  sfm.prep.video_fps)                       \
+    X("arcturus_mask_degrees",       sfm.prep.arcturus_mask_degrees)            \
+    X("arcturus_eye",                sfm.prep.arcturus_eye)                    \
     X("arcturus_keyframes",          sfm.prep.arcturus_keyframes)               \
     X("adaptive_fps",               sfm.prep.adaptive_fps)                    \
     X("adaptive_range",             sfm.prep.adaptive_range)                  \
@@ -91,6 +93,7 @@ namespace {
     X("sfm_data_type",              sfm.data_type)                            \
     X("sfm_camera_model",           sfm.camera_model)                         \
     X("sfm_camera_mode",            sfm.camera_mode)                          \
+    X("sfm_tracking_selection",     sfm.tracking_selection)                   \
     X("sfm_pairs",                  sfm.pairs)                                \
     X("sfm_overlap",                sfm.overlap)                              \
     X("sfm_loop_closure",           sfm.loop_closure)                         \
@@ -179,6 +182,22 @@ bool dataset_apply_preset(DatasetSettings& s, const std::string& name) {
         // change: what a freshly opened capture would have had.
         return true;
     }
+    if (name == "arcturus-vision") {
+        s.colmap_engine = false;
+        s.sfm.camera_model = "opencv-fisheye";
+        s.sfm.camera_mode = 1;
+        s.sfm.pairs = 0;
+        s.sfm.tracking_selection = true;
+        s.sfm.distortion_refine = 2;
+        s.sfm.prep.arcturus_keyframes = true;
+        s.sfm.prep.arcturus_eye = 0;
+        s.sfm.prep.arcturus_mask_degrees = 130;
+        s.sfm.prep.adaptive_fps = false;
+        s.sfm.mask_features = true;
+        s.use_found_masks = true;
+        s.border_enable = false;
+        return true;
+    }
     if (name == "360-camera") {
         // Two fisheye circles per frame is what a consumer 360 camera writes;
         // dataset_adapt_preset() takes it back to the panorama model for a
@@ -227,6 +246,8 @@ void sanitize_dataset_settings(DatasetSettings& s) {
     s.colmap.dense = s.sfm.dense;
     PrepJob& p = s.sfm.prep;
     clamp_enum(p.photo_import, 0, kNumPhotoImports - 1);
+    clamp_to(p.arcturus_eye, 0, 2);
+    clamp_to(p.arcturus_mask_degrees, 1, 360);
     clamp_enum(p.pano.mode, 0, (int)app::Pano360Mode::Equirect);
     clamp_to(p.pano.size, 0, 16384);
     p.video_fps = std::clamp(p.video_fps, 0.0f, 240.0f);

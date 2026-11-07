@@ -229,6 +229,7 @@ void SfmRunner::take_reconstruction(SfmJob& job) {
     job.overlap = _live.overlap;
     job.loop_closure = _live.loop_closure;
     job.prefilter_sequential = _live.prefilter_sequential;
+    job.tracking_selection = _live.tracking_selection;
     job.init_focal_px = _live.init_focal_px;
     job.init_distortion = _live.init_distortion;
     job.distortion_refine = _live.distortion_refine;
@@ -523,6 +524,12 @@ sfm::Manifest SfmRunner::build_manifest(const SfmJob& job, const PrepResult& pre
                 man.cameras.end());
             man.cameras.push_back(camera);
         }
+        if (!calibrated.stereo_groups.empty())
+            man.stereo_groups.insert(man.stereo_groups.end(), calibrated.stereo_groups.begin(),
+                                     calibrated.stereo_groups.end());
+        else if (calibrated.cameras.size() == 2)
+            man.stereo_groups.push_back({{calibrated.cameras[0].prefix,
+                                          calibrated.cameras[1].prefix}});
         man.rigs.clear();
     }
     return man;
@@ -814,6 +821,8 @@ std::vector<std::string> SfmRunner::recon_args(const SfmJob& job,
     }
     for (const std::string& a : split_args(job.extra_args))
         argv.push_back(a);
+    argv.push_back(job.tracking_selection ? "--tracking-selection" : "--no-tracking-selection");
+    argv.push_back("--stereo-selection");
     if (has_arcturus_manifest(prep.image_dir)) {
         argv.insert(argv.end(),
                     {"--no-refine-extra-params", "--no-final-extra-params", "--exif-orientation",

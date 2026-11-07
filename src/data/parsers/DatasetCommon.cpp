@@ -19,6 +19,7 @@
 #include <map>
 #include <memory>
 #include <mutex>
+#include <sstream>
 #include <set>
 #include <sstream>
 #include <stdexcept>
@@ -941,20 +942,56 @@ void read_gauge(const std::string& dir, ParsedDataset& ds) {
     bool lat = false, lon = false, alt = false;
     // Line at a time, so a comment with an odd number of words cannot shift
     // every key onto the wrong value.
+    std::optional<std::array<float, 3>> up;
     std::string line;
     while (std::getline(f, line)) {
         std::istringstream in(line);
         std::string key, value;
-        if (!(in >> key >> value) || key[0] == '#') continue;
-        if (key == "oriented") ds.gauge_oriented = value == "1";
-        else if (key == "metric") ds.gauge_metric = value == "1";
-        else if (key == "origin_lat") lat = number(value, geo.lat_deg);
-        else if (key == "origin_lon") lon = number(value, geo.lon_deg);
-        else if (key == "origin_alt") alt = number(value, geo.alt_m);
-        else if (key == "alt_source") geo.alt_source = value;
+        if (!(in >> key) || key[0] == '#') continue;
+        if (key == "up_axis") {
+            std::array<float, 3> v;
+            if (!(in >> v[0] >> v[1] >> v[2])) continue;
+            const double n = std::hypot((double)v[0], (double)v[1], (double)v[2]);
+            if (!(n > 1e-9) || !std::isfinite(n)) continue;
+            for (float &x : v) x = (float)(x / n);
+            up = v;
+        } else if (in >> value) {
+            if (key == "oriented") ds.gauge_oriented = value == "1";
+            else if (key == "metric") ds.gauge_metric = value == "1";
+            else if (key == "origin_lat") lat = number(value, geo.lat_deg);
+            else if (key == "origin_lon") lon = number(value, geo.lon_deg);
+            else if (key == "origin_alt") alt = number(value, geo.alt_m);
+            else if (key == "alt_source") geo.alt_source = value;
+        }
     }
     geo.ok = lat && lon;
     if (!alt) geo.alt_source.clear();
+    if (ds.gauge_oriented && !up) {
+        up = std::array<float, 3>{0, 0, 1};
+        // Native Arcturus imports predating up_axis keep tracking's -Y-up frame.
+        fs::path parent(dir);
+        for (int depth = 0; depth < 4 && !parent.empty(); ++depth, parent = parent.parent_path()) {
+            std::error_code ec;
+            if (fs::is_regular_file(parent / ".arcturus-aligned", ec)) {
+                up = std::array<float, 3>{0, -1, 0};
+                break;
+            }
+        }
+    }
+    ds.navigation_up = up;
+}
+
+std::array<float, 3> normalized_up(const ParsedDataset& ds) {
+    if (!ds.navigation_up) return {0, 0, 1};
+    std::array<float, 3> up{};
+    // train_to_normalized maps normalized -> training; uniform scale cancels here.
+    for (int r = 0; r < 3; ++r)
+        for (int k = 0; k < 3; ++k)
+            up[r] += ds.train_to_normalized[k * 4 + r] * (*ds.navigation_up)[k];
+    const float n = std::hypot(up[0], up[1], up[2]);
+    if (!(n > 1e-9f) || !std::isfinite(n)) return {0, 0, 1};
+    for (float &x : up) x /= n;
+    return up;
 }
 
 }  // namespace dsparse

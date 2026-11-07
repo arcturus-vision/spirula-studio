@@ -62,6 +62,7 @@ struct MatchStats {
     size_t images = 0, pairs = 0, kept = 0, scored = 0;
     uint64_t inliers = 0, putative = 0;
     double select_seconds = 0;
+    bool tracking_used = false;
 };
 
 // A telemetry file read once per run, with the queries the sensor priors and

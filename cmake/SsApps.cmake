@@ -287,6 +287,11 @@ if(SS_BUILD_GUI)
         ${CMAKE_BINARY_DIR}/app_generated/app_banner.h
         AppBanner)
 
+    ss_embed_file(
+        ${SS_ROOT}/assets/arcturus-vision-icon.png
+        ${CMAKE_BINARY_DIR}/app_generated/arcturus_logo.h
+        ArcturusLogo)
+
     file(GLOB SS_GUI_SOURCES CONFIGURE_DEPENDS
         ${SS_SRC}/app/gui/*.cpp ${SS_SRC}/app/gui/edit/*.cpp
         ${SS_SRC}/app/gui/render/*.cpp ${SS_SRC}/app/gui/mask/*.cpp)
@@ -554,6 +559,19 @@ ss_configure_app(ffmpeg_probe_test)
 # dataset run are kept or redone, and the preset serializers. Named rather
 # than globbed -- each such test names its own sources.
 if(SS_BUILD_GUI)
+    add_executable(navigation_frame_test
+        ${SS_SRC}/app/gui/tests/navigation_frame_test.cpp
+        ${SS_SRC}/app/gui/NavCamera.cpp
+        ${SS_SRC}/app/gui/SfmProgress.cpp
+        ${SS_SRC}/app/gui/Automation.cpp
+        ${SS_SRC}/app/gui/GlLoader.cpp
+        ${SS_SRC}/app/AppPaths.cpp)
+    ss_configure_app(navigation_frame_test)
+    target_link_libraries(navigation_frame_test PRIVATE imgui_glfw OpenGL::GL)
+    if(WIN32)
+        target_link_libraries(navigation_frame_test PRIVATE ws2_32)
+    endif()
+
     add_executable(command_argv_test
         ${SS_SRC}/app/gui/tests/command_argv_test.cpp
         ${SS_SRC}/app/gui/Subprocess.cpp)
@@ -799,9 +817,11 @@ endif()
 if(SS_BUILD_SFM AND SS_BUILD_GUI)
     add_executable(arcturus_import_test
         ${SS_SRC}/app/gui/tests/arcturus_import_test.cpp
+        ${SS_SRC}/app/FfmpegVideo.cpp
         ${SS_SRC}/app/gui/ArcturusImport.cpp
         ${SS_SRC}/app/gui/Subprocess.cpp
-        ${SS_SRC}/app/gui/PrepProgress.cpp)
+        ${SS_SRC}/app/gui/PrepProgress.cpp
+        ${SS_SRC}/app/gui/ProgressClock.cpp)
     ss_configure_app(arcturus_import_test)
     target_compile_definitions(arcturus_import_test PRIVATE SS_TOOL_SFM=1)
     target_link_libraries(arcturus_import_test PRIVATE ss_sfm)

@@ -7,8 +7,10 @@
 
 #include <atomic>
 #include <cstdint>
+#include <functional>
 #include <memory>
 #include <string>
+#include <thread>
 #include <utility>
 #include <vector>
 
@@ -44,9 +46,10 @@ public:
     ~FfmpegFrames();
     FfmpegFrames(const FfmpegFrames&) = delete;
     FfmpegFrames& operator=(const FfmpegFrames&) = delete;
-    // `argv` is the command up to the output, which this appends.
-    bool open(std::vector<std::string> argv, FfmpegFrameFormat format,
-              std::string& error);
+    // on_line runs on the stderr thread; cancel must outlive the stream.
+    bool open(std::vector<std::string> argv, FfmpegFrameFormat format, std::string& error,
+              std::function<void(const std::string&)> on_line = {},
+              const std::atomic<bool>* cancel = nullptr);
     // The next picture; false at the end of the stream with `error` empty, or
     // on a failure with it set. RGB48 samples are big-endian byte pairs.
     bool next(std::vector<uint8_t>& px, int& width, int& height,
@@ -60,12 +63,15 @@ private:
     bool read_exact(uint8_t* dst, size_t n);
     bool read_int(int& v);
     bool finish(std::string& error);
+    void stop_watch();
 
     std::unique_ptr<gui::ProcessReader> _proc;
     std::vector<uint8_t> _buf;
     size_t _at = 0, _end = 0;
     FfmpegFrameFormat _format = FfmpegFrameFormat::Rgb8;
     std::string _last_line;   // of its stderr: what a failure says
+    std::atomic<bool> _stop_watch{false};
+    std::thread _watch;
 };
 
 }  // namespace app

@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <limits>
 
 namespace polar_spline {
 inline double value(double x) { return x; }
@@ -22,10 +23,16 @@ template <class T, class C> void shift(T x, T y, const C *coeff, T out[2]) {
         return;
     }
     T radius = sqrt(x * x + y * y);
+    if (!std::isfinite(value(radius))) {
+        out[0] = out[1] = T(std::numeric_limits<double>::quiet_NaN());
+        return;
+    }
     T theta = atan2(y, x) * T(0.7957747154594767);
     if (value(theta) < 0)
         theta = theta + T(5);
-    int r = (int)std::floor(value(radius)), c = (int)std::floor(value(theta));
+    // Clamp before conversion: inverse-lens iterations can exceed the integer range.
+    const T sample_radius = value(radius) < 7 ? radius : T(7);
+    int r = (int)std::floor(value(sample_radius)), c = (int)std::floor(value(theta));
     T rt[2];
     for (int axis = 0; axis < 2; ++axis) {
         T rows[4];
@@ -38,7 +45,7 @@ template <class T, class C> void shift(T x, T y, const C *coeff, T out[2]) {
             }
             rows[i] = cubic(nodes[0], nodes[1], nodes[2], nodes[3], theta - T(c));
         }
-        rt[axis] = cubic(rows[0], rows[1], rows[2], rows[3], radius - T(r));
+        rt[axis] = cubic(rows[0], rows[1], rows[2], rows[3], sample_radius - T(r));
     }
     out[0] = (rt[0] * x - rt[1] * y) / radius;
     out[1] = (rt[0] * y + rt[1] * x) / radius;

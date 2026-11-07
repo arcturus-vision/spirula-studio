@@ -479,6 +479,10 @@ void ViewportPanel::rebuild_m2s() {
     if (!(_m2s_scale > 1e-20f)) _m2s_scale = 1.0f;
     static const float kI[12] = {1,0,0,0, 0,1,0,0, 0,0,1,0};
     _m2s_identity = std::memcmp(_m2s, kI, sizeof kI) == 0;
+    float up[3]{};
+    for (int r = 0; r < 3; ++r)
+        for (int k = 0; k < 3; ++k) up[r] += _m2s_base[r * 4 + k] * _navigation_up[k];
+    set_nav_up(up);
 }
 
 void ViewportPanel::set_edit_transform(const float a[12]) {
@@ -523,6 +527,7 @@ void ViewportPanel::set_level_cameras(bool on) {
 }
 
 void ViewportPanel::adopt_gauge(const ParsedDataset& ds, bool first) {
+    _navigation_up = dsparse::normalized_up(ds);
     for (int k = 0; k < 9; k++) _align[k] = ds.normalized_rotation[k];
     _align_identity = true;
     for (int r = 0; r < 3 && _align_identity; r++)
@@ -853,6 +858,10 @@ void ViewportPanel::attach_preview_mesh(const meshing::MeshData& mesh,
             (int64_t)mesh.V.size(), 3, A);
         set_centers(&centers, false);
     }
+    _navigation_up = {0, 0, 1};
+    _align_identity = true;
+    _gauge_metric = false;
+    rebuild_m2s();
     if (key != _framed_key) {
         _framed_key = key;
         _cam.mode = NavCamera::Turntable;
@@ -894,9 +903,9 @@ void ViewportPanel::attach_scene(const ViewerRenderConfig& cfg,
     _buffer_idx = std::min<int>(_buffer_idx, (int)_buffer_keys.size() - 1);
     _has_cameras = false;
     _show_cams = false;
+    _navigation_up = cfg.navigation_up;
     set_centers(&cfg.centers, cfg.center_cameras);
-    // A file, not a dataset: nothing rotated it and nothing says what a unit
-    // is, but its own scale still sets what the grid's cell measures.
+    // A file retains its own axes; its scale sets the grid's cell size.
     _align_identity = true;
     _gauge_metric = false;
     _scene_scale = cfg.train_frame_scale > 0 ? cfg.train_frame_scale : 1.0f;

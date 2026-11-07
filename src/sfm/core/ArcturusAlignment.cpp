@@ -28,8 +28,8 @@ Pose arcturus_xr_starting_pose(const Pose &world_from_camera, double display_deg
     return {{right.x, 0, forward.x, 0, 1, 0, right.z, 0, forward.z}, world_from_camera.t};
 }
 
-void align_arcturus_dataset(const std::string &workspace, const std::string &images) {
-    std::map<std::string, std::pair<sfm::Pose, double>> targets;
+ArcturusPoseMap read_arcturus_poses(const std::string &images) {
+    ArcturusPoseMap targets;
     for (const auto &e : fs::recursive_directory_iterator(images)) {
         if (e.path().filename() != ".arcturus-poses.txt")
             continue;
@@ -46,10 +46,26 @@ void align_arcturus_dataset(const std::string &workspace, const std::string &ima
             in >> pose.t.x >> pose.t.y >> pose.t.z;
             if (!in)
                 throw std::runtime_error(amsg::err_incomplete_arcturus_pose_file.get());
-            targets[(prefix == "." ? fs::path(name) : prefix / name).generic_string()] = {pose,
-                                                                                          rotation};
+            const Mat3 ortho = mul(transpose(pose.R), pose.R);
+            bool valid = std::isfinite(rotation) && std::isfinite(pose.t.x) &&
+                         std::isfinite(pose.t.y) && std::isfinite(pose.t.z);
+            for (size_t i = 0; i < 9; ++i)
+                valid = valid && std::isfinite(pose.R[i]) &&
+                        std::abs(ortho[i] - (i % 4 == 0 ? 1. : 0.)) < 1e-3;
+            const Vec3 x{pose.R[0], pose.R[3], pose.R[6]};
+            const Vec3 y{pose.R[1], pose.R[4], pose.R[7]};
+            const Vec3 z{pose.R[2], pose.R[5], pose.R[8]};
+            valid = valid && x.cross(y).dot(z) > .999;
+            const auto key = (prefix == "." ? fs::path(name) : prefix / name).generic_string();
+            if (!valid || !targets.emplace(key, std::make_pair(pose, rotation)).second)
+                throw std::runtime_error(amsg::err_incomplete_arcturus_pose_file.get());
         }
     }
+    return targets;
+}
+
+void align_arcturus_dataset(const std::string &workspace, const std::string &images) {
+    const auto targets = read_arcturus_poses(images);
     if (targets.empty())
         return;
     const auto completion = fs::path(workspace) / ".arcturus-aligned";
@@ -160,7 +176,7 @@ void align_arcturus_dataset(const std::string &workspace, const std::string &ima
     const fs::path output = fs::path(workspace) / "sparse" / "0";
     fs::create_directories(output);
     model.writeBinary(output.string());
-    std::ofstream(output / "gauge.txt") << "oriented 1\nmetric 1\n";
+    std::ofstream(output / "gauge.txt") << "oriented 1\nmetric 1\nup_axis 0 -1 0\n";
     std::sort(errors.begin(), errors.end());
     std::ofstream report(fs::path(workspace) / "alignment.json");
     report << std::setprecision(17) << "{\"scale\":" << transform.scale << ",\"rotation\":[";

@@ -280,9 +280,11 @@ struct ParsedDataset {
     // What the model's own frame is worth, from the gauge.txt a reconstruction
     // leaves beside it (sfm/Pipeline.h ModelGauge). Both false when there is no
     // such file, which is every dataset that did not come from this tool.
-    bool                     gauge_oriented = false;   // +Z is up, measured
+    bool                     gauge_oriented = false;   // up is measured
     bool                     gauge_metric = false;     // one unit is one metre
     spirula::GeoReference    gauge_geo;                // where (0,0,0) is, from GPS
+    // Known up direction in the training frame; absent when it is only guessed.
+    std::optional<std::array<float, 3>> navigation_up;
 
     // An editor save left `<name>.orig` beside the files it replaced
     // (data/SparseEdit.h): the frame is one somebody chose, not one to guess at.
@@ -446,6 +448,7 @@ void assign_val_split(ParsedDataset& ds, float validation_fraction);
 // gauge.txt in `dir` (sfm/Pipeline.h writes one, and so does an E57 import):
 // what the frame is worth. Absent, both flags stay false.
 void read_gauge(const std::string& dir, ParsedDataset& ds);
+std::array<float, 3> normalized_up(const ParsedDataset& ds);
 
 // Auxiliary mask/depth/normal discovery by filename convention. "" when
 // `rel_name` is empty or would leave `aux_dir`.

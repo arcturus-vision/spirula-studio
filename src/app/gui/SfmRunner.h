@@ -137,6 +137,7 @@ struct SfmJob {
     // Pair selection only: also match each image with its neighbours in file
     // order, the converse of the above.
     bool prefilter_sequential = false;
+    bool tracking_selection = true;
     float init_focal_px = 0.0f;       // 0 = guess from EXIF / image size
     // Starting distortion, "k1,k2,..." in the lens model's own order; empty
     // starts at zero.

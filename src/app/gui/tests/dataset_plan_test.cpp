@@ -3,6 +3,7 @@
 // the way a run writes them.
 
 #include "app/LidarDataset.h"
+#include "app/gui/ColmapRunner.h"
 #include "app/gui/DatasetPlan.h"
 #include "app/gui/SfmRunner.h"
 #include "sfm/core/Resume.h"
@@ -161,6 +162,25 @@ int main() {
         expect(!(frames_fields(a.prep) == fb) && verbatim,
                "a detected LUT is part of the frames, named as it is");
     }
+    {
+        SfmJob a = made, b = made;
+        a.prep.inputs[0].arcturus_detected = true;
+        b = a;
+        b.prep.arcturus_mask_degrees = 150;
+        expect(frames_fields(a.prep) == frames_fields(b.prep),
+               "radial angle preserves extracted frames");
+        expect(!(masks_fields(a.prep) == masks_fields(b.prep)),
+               "radial angle invalidates training masks");
+        expect(!(model_fields(a) == model_fields(b)),
+               "radial angle invalidates masked feature reconstruction");
+        ColmapJob colmap;
+        colmap.mask_features = true;
+        expect(!(model_fields(colmap, a.prep) == model_fields(colmap, b.prep)),
+               "radial angle invalidates COLMAP reconstruction");
+        a.mask_features = b.mask_features = false;
+        expect(model_fields(a) == model_fields(b),
+               "radial angle preserves reconstruction when feature masking is off");
+    }
 
     // ---- the fields --------------------------------------------------------
     {
@@ -176,9 +196,18 @@ int main() {
         c.prep.inputs[0].clip_end = 40.0;
         expect(!(frames_fields(b.prep) == frames_fields(c.prep)),
                "... and so is where it ends");
-        b.prep.arcturus_keyframes = true;
+        b = made;
+        b.prep.arcturus_keyframes = !a.prep.arcturus_keyframes;
         expect(!(frames_fields(a.prep) == frames_fields(b.prep)),
                "recorded keyframe selection is part of the frames");
+        b = made;
+        b.prep.arcturus_eye = 2;
+        expect(!(frames_fields(a.prep) == frames_fields(b.prep)),
+               "changing reconstructed eyes invalidates extracted frames");
+        b = made;
+        b.tracking_selection = !a.tracking_selection;
+        expect(!(model_fields(a) == model_fields(b)) && frames_fields(a.prep) == frames_fields(b.prep),
+               "pose selection invalidates the model but preserves frames");
         b = made;
         b.prep.mask_prompt = "person; car";
         expect(frames_fields(a.prep) == frames_fields(b.prep),
@@ -304,6 +333,27 @@ int main() {
                "a change that is not the rule's still makes the frames again");
         fs::remove(ws / kSkippedListFile);
     }
+    {
+        SfmJob camera = made;
+        camera.prep.inputs[0].arcturus_detected = true;
+        expect(!(masks_fields(camera.prep) == masks_fields(made.prep)),
+               "Arcturus boundary invalidates masks made without the cutoff");
+        camera.prep.mask_enable = false;
+        expect(!masks_fields(camera.prep).empty(),
+               "Arcturus boundary is recorded without segmentation");
+        const auto computed = plan(camera);
+        expect(computed[Step::Masks].act == Act::Redo,
+               "adding the automatic cutoff schedules mask generation");
+        expect(computed[Step::Model].act == Act::Redo,
+               "automatic Arcturus masks invalidate feature matching and reconstruction");
+        camera.prep.mask_feature_prompt.clear();
+        camera.prep.inputs[0].stencil = {};
+        const auto masked_fields = model_fields(camera);
+        camera.mask_features = false;
+        expect(!(masked_fields == model_fields(camera)),
+               "Arcturus masks reach features without segmentation or drawn borders");
+    }
+
     {
         const DatasetPlan p = plan(made);
         expect(p[Step::Frames].act == Act::Reuse && p[Step::Masks].act == Act::Reuse &&
@@ -503,6 +553,10 @@ int main() {
 
     {
         touch(ws / "images" / ".arcturus-manifest.json");
+        StepRecord previous = read_dataset_record(ws.string()).step(Step::Model);
+        StepRecord calibrated = previous;
+        calibrated.fields = model_fields(made);
+        write_step_record(ws.string(), Step::Model, calibrated);
         DatasetPlan p = plan(made);
         expect(p[Step::Model].act == Act::Run && p[Step::Model].why == Why::Resume,
                "an unfinished tracking alignment resumes the model step");
@@ -514,6 +568,7 @@ int main() {
         fs::remove(ws / "images" / ".arcturus-manifest.json");
         fs::remove(ws / ".arcturus-aligned");
         fs::remove(ws / "scene.xrSceneTransform.json");
+        write_step_record(ws.string(), Step::Model, previous);
     }
 
     // ---- what the record restores ------------------------------------------
@@ -950,7 +1005,8 @@ int main() {
         const DatasetRecord old = read_legacy_settings(ws.string(), j, colmap);
         expect(old.present && !colmap && j.quality == 3 && j.data_type == 1 &&
                    j.camera_model == "thin-prism-fisheye" && j.metric_gps == 1 &&
-                   !j.prefilter_sequential && j.mask_features && j.prep.video_fps == 2.0f,
+                   !j.prefilter_sequential && j.mask_features && j.prep.video_fps == 2.0f &&
+                   !j.prep.arcturus_keyframes,
                "the old stamps give back the settings they recorded");
         SfmJob d = dropped_images(ws, made);
         restore_record_inputs(old, d.prep, d.camera_model);

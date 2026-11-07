@@ -116,8 +116,9 @@ bool read_live_model(const std::string& dir, int64_t& mtime, LiveModel& out,
 // disagree: a seed retry is a new model, not a moved one.
 bool snapshot_motion(const LiveModel& from, const LiveModel& to, float S[12]);
 
-// The cameras' mean up axis, unit, in the snapshot's normalized frame.
-bool snapshot_up(const LiveModel& m, float up[3]);
+// Mean camera up in the snapshot frame, with sensor display roll corrected.
+bool snapshot_up(const LiveModel& m, float up[3],
+                 const std::vector<double>& display_degrees = {});
 bool read_pair_matrix(const std::string& dir, int64_t& mtime, PairMatrix& out);
 
 // The same matrix from a finished `matches.bin`, which is what a run leaves

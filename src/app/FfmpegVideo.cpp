@@ -6,9 +6,11 @@
 
 #include <algorithm>
 #include <cctype>
+#include <chrono>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <limits>
 
 namespace app {
 
@@ -92,7 +94,9 @@ FfmpegFrames::FfmpegFrames() = default;
 FfmpegFrames::~FfmpegFrames() { close(); }
 
 bool FfmpegFrames::open(std::vector<std::string> argv, FfmpegFrameFormat format,
-                        std::string& error) {
+                        std::string& error,
+                        std::function<void(const std::string&)> on_line,
+                        const std::atomic<bool>* cancel) {
     close();
     _format = format;
     _at = _end = 0;
@@ -103,10 +107,22 @@ bool FfmpegFrames::open(std::vector<std::string> argv, FfmpegFrameFormat format,
     argv.insert(argv.end(), {"-f", "image2pipe", "-c:v", gray ? "pgm" : "ppm",
                              "-pix_fmt", pixel_format, "-"});
     _proc = std::make_unique<gui::ProcessReader>();
-    if (!_proc->start(argv, [this](const std::string& l) { _last_line = l; })) {
+    if (!_proc->start(argv, [this, on_line](const std::string& l) {
+            _last_line = l;
+            if (on_line) on_line(l);
+        })) {
         _proc.reset();
         error = "could not run " + argv[0];
         return false;
+    }
+    if (cancel) {
+        _stop_watch = false;
+        _watch = std::thread([this, cancel] {
+            while (!_stop_watch.load()) {
+                if (cancel->load()) { _proc->kill(); break; }
+                std::this_thread::sleep_for(std::chrono::milliseconds(20));
+            }
+        });
     }
     return true;
 }
@@ -139,6 +155,7 @@ bool FfmpegFrames::read_int(int& v) {
     if (c < 0 || !std::isdigit(c)) return false;
     v = 0;
     while (c >= 0 && std::isdigit(c)) {
+        if (v > (std::numeric_limits<int>::max() - (c - '0')) / 10) return false;
         v = v * 10 + (c - '0');
         c = get();
     }
@@ -147,6 +164,7 @@ bool FfmpegFrames::read_int(int& v) {
 }
 
 bool FfmpegFrames::finish(std::string& error) {
+    stop_watch();
     const int rc = _proc->finish();
     _proc.reset();
     if (rc == 0) return true;
@@ -169,7 +187,8 @@ bool FfmpegFrames::next(std::vector<uint8_t>& px, int& width, int& height,
     const int expected_maxval = sample_bytes() == 2 ? 65535 : 255;
     if (p != 'P' || get() != (gray ? '5' : '6') || !read_int(width) ||
         !read_int(height) || !read_int(maxval) || maxval != expected_maxval ||
-        width <= 0 || height <= 0) {
+        width <= 0 || height <= 0 ||
+        (uint64_t)width * height * (gray ? 1 : 3) * sample_bytes() > 256 * 1024 * 1024) {
         close();
         error = "ffmpeg wrote a picture this could not read";
         return false;
@@ -183,10 +202,16 @@ bool FfmpegFrames::next(std::vector<uint8_t>& px, int& width, int& height,
 }
 
 void FfmpegFrames::close() {
+    stop_watch();
     if (!_proc) return;
     _proc->kill();
     _proc->finish();
     _proc.reset();
+}
+
+void FfmpegFrames::stop_watch() {
+    _stop_watch = true;
+    if (_watch.joinable()) _watch.join();
 }
 
 }  // namespace app

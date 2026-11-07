@@ -135,7 +135,7 @@ Fetched fetch(const std::string& image, const std::string& mask, bool alpha,
                    mask.empty() ? std::vector<std::string>{}
                                 : std::vector<std::string>{mask},
                    {}, {}, {W}, {H}, {}, {}, viewmat, {10.0f, 10.0f, 4.0f, 3.0f},
-                   std::vector<float>(8, 0.0f), {}, {}, {}, {}, {}, {}, {}, {0}, {});
+                   std::vector<float>(kCameraDistortionParams, 0.0f), {}, {}, {}, {}, {}, {}, {}, {0}, {});
     DecodedBatch b;
     dm.fetch_one(0, b);
     return {b.mask_width, b.mask_height, b.mask_buffer, b.rgb_buffer};

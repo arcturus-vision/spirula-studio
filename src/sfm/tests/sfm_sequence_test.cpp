@@ -11,6 +11,7 @@
 
 #include "sfm/core/Sequence.h"
 #include "sfm/feature/Pairing.h"
+#include "sfm/feature/StereoSelection.h"
 #include "sfm/map/Mapper.h"
 #include "sfm/tests/TestMain.h"
 
@@ -78,6 +79,19 @@ static void testTable() {
         threw = true;
     }
     check(threw, "an image in two sequences is an error");
+
+    const auto stereo = stereoSelection(names, {defs[0]});
+    check(stereo.representatives == std::vector<uint32_t>({0, 1, 2, 5, 6}),
+          "one representative per stereo instant, unpaired images retained");
+    const std::vector<std::pair<uint32_t, uint32_t>> expanded = {
+        {0, 1}, {0, 3}, {1, 2}, {1, 3}, {1, 4}, {2, 4}, {5, 6}};
+    check(stereo.expand({{0, 1}, {1, 2}, {3, 4}, {0, 1}}) == expanded,
+          "selection expands both eyes, includes stereo mates and deduplicates");
+    check(stereoSelection(names, {}).representatives.size() == names.size(),
+          "ordinary images are never inferred to be stereo from filenames");
+    const auto reversed = stereoSelection({"cam1/a", "cam0/a", "cam1/b"}, {defs[0]});
+    check(reversed.representatives == std::vector<uint32_t>({1, 2}),
+          "first lens represents a pair regardless of image order; missing mate survives");
 }
 
 // A walk along a wall whose far end repeats its near end feature for feature:

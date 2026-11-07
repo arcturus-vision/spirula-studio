@@ -47,6 +47,7 @@ struct DatasetPreset {
 struct DatasetPresetInfo { const char* name; };
 inline constexpr DatasetPresetInfo kDatasetPresets[] = {
     {"general"},
+    {"arcturus-vision"},
     {"360-camera"},
     {"internet-photos"},
 };

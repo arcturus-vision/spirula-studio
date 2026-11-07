@@ -71,6 +71,7 @@ struct Manifest {
     // Sequences: `members:` path prefixes as a rig's, the images under them
     // taken in file-name order (sfm/core/Sequence.h).
     std::vector<SequenceDef> sequences;
+    std::vector<SequenceDef> stereo_groups;  // synchronized, overlapping lenses; selection only
 
     std::string image_gamut;         // empty = leave the run's own
     int image_linear = -1;           // -1 unset, 0 no, 1 yes

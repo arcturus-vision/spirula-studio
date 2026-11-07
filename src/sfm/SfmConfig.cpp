@@ -680,6 +680,14 @@ std::string stageSignature(const SfmConfig& cfg, uint32_t cmd) {
             }
             out += "\n";
         }
+    if ((cmd & CMD_MATCH) && cfg.tracking_selection)
+        out += "tracking-v1=" + cfg.tracking_pose_signature + "\n";
+    if ((cmd & CMD_MATCH) && cfg.stereo_selection)
+        for (const SequenceDef& d : cfg.stereo_groups) {
+            out += "stereo-group";
+            for (const auto& p : d.members) out += " " + std::to_string(p.size()) + ":" + p;
+            out += "\n";
+        }
     return out;
 }
 

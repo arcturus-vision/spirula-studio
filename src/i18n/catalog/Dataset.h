@@ -13,6 +13,7 @@
 // Same two rules as Gui.h: no sentence built from fragments, no
 // plural-sensitive counting.
 
+#include "i18n/catalog/Arcturus.h"
 #include "i18n/BeginCatalog.h"
 
 #include <cstddef>
@@ -16240,6 +16241,7 @@ struct DatasetPresetText {
 
 inline constexpr DatasetPresetText kDatasetPresetText[] = {
     {"general",         &preset_ds_general,  &preset_ds_general_help},
+    {"arcturus-vision", &arcturus::preset, &arcturus::preset_dataset_help},
     {"360-camera",      &preset_ds_360,      &preset_ds_360_help},
     {"internet-photos", &preset_ds_internet, &preset_ds_internet_help},
 };

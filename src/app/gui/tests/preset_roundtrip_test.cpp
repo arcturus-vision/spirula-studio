@@ -11,6 +11,7 @@
 #include "app/gui/MeshPreset.h"
 #include "core/SourcePath.h"
 #include "dense/ConfigFields.h"
+#include "config/TrainConfig.h"
 
 #include <cstdio>
 #include <filesystem>
@@ -60,7 +61,9 @@ static void test_dataset_preset() {
     s.sfm.prep.photo_import = gui::PhotoImport::Move;
     s.sfm.prep.flip_found_masks = true;
     s.sfm.prep.video_fps = 5.5f;
-    s.sfm.prep.arcturus_keyframes = true;
+    s.sfm.prep.arcturus_keyframes = false;
+    s.sfm.prep.arcturus_eye = 2;
+    s.sfm.prep.arcturus_mask_degrees = 150;
     s.sfm.prep.adaptive_fps = true;
     s.sfm.prep.adaptive_range = 2.5f;
     s.sfm.prep.sharp_window = 7;
@@ -140,6 +143,7 @@ static void test_dataset_preset() {
     s.sfm.camera_model = "opencv-fisheye";
     s.sfm.camera_mode = 2;
     s.sfm.pairs = 3;
+    s.sfm.tracking_selection = false;
     s.sfm.overlap = 25;
     s.sfm.loop_closure = false;
     s.sfm.init_focal_px = 1500.0f;
@@ -206,6 +210,9 @@ static void test_dataset_preset() {
     CHECK_EQ(b.sfm.prep.flip_found_masks, s.sfm.prep.flip_found_masks);
     CHECK_EQ(b.sfm.prep.video_fps, s.sfm.prep.video_fps);
     CHECK_EQ(b.sfm.prep.arcturus_keyframes, s.sfm.prep.arcturus_keyframes);
+    CHECK_EQ(b.sfm.prep.arcturus_eye, s.sfm.prep.arcturus_eye);
+    CHECK_EQ(b.sfm.prep.arcturus_mask_degrees, s.sfm.prep.arcturus_mask_degrees);
+    CHECK_EQ(b.sfm.tracking_selection, s.sfm.tracking_selection);
     CHECK_EQ(b.sfm.prep.adaptive_fps, s.sfm.prep.adaptive_fps);
     CHECK_EQ(b.sfm.prep.adaptive_range, s.sfm.prep.adaptive_range);
     CHECK_EQ(b.sfm.prep.sharp_window, s.sfm.prep.sharp_window);
@@ -503,6 +510,29 @@ static void test_dense_draft_restore() {
 
 int main() {
     test_dataset_preset();
+    bool has_arcturus = false;
+    for (const auto& preset : gui::kDatasetPresets)
+        has_arcturus = has_arcturus || std::string(preset.name) == "arcturus-vision";
+    CHECK(has_arcturus);
+    gui::DatasetSettings arcturus;
+    arcturus.sfm.pairs = 3;
+    CHECK(gui::dataset_apply_preset(arcturus, "arcturus-vision"));
+    CHECK(!arcturus.colmap_engine && arcturus.sfm.camera_mode == 1);
+    CHECK(arcturus.sfm.prep.arcturus_keyframes && !arcturus.sfm.prep.adaptive_fps);
+    CHECK(!arcturus.border_enable && arcturus.sfm.mask_features);
+    CHECK(arcturus.sfm.tracking_selection && arcturus.sfm.prep.arcturus_eye == 0);
+    CHECK(arcturus.sfm.prep.arcturus_mask_degrees == 130);
+    CHECK(arcturus.sfm.distortion_refine == 2);
+    CHECK(arcturus.sfm.pairs == 0);
+    TrainConfig train;
+    CHECK(train_apply_preset(train, "arcturus-vision"));
+    CHECK(train.num_iterations == 30000 && train.cap_max == 1500000);
+    CHECK(train.sh_degree == 0 && train.train_resolution_divisor == 2.0f);
+    CHECK(train.load_masks && !train.warp_to_pinhole && !train.auto_scale_poses);
+    CHECK(train.apply_loss_for_mask.has_value() && !*train.apply_loss_for_mask);
+    CHECK(train.center_method == "none" && train.orientation_method == "none");
+    CHECK(train.scene_center == "none" && train.relative_scale == 1.0f);
+    CHECK(train.mask_boundary_offset == 0.0f);
     test_mesh_preset();
     test_sanitize();
     test_unknown_key_ignored();

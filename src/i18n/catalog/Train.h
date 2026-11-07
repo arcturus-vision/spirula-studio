@@ -13,6 +13,7 @@
 // translation catalog behind it. The link between the two lists is a
 // static_assert at each consumer that the counts match.
 
+#include "i18n/catalog/Arcturus.h"
 #include "i18n/BeginCatalog.h"
 
 #include <cstddef>
@@ -384,6 +385,7 @@ struct PresetText {
 
 inline constexpr PresetText kPresetText[] = {
     {"3dgs",              &preset_3dgs,              &preset_3dgs_help},
+    {"arcturus-vision", &arcturus::preset, &arcturus::preset_train_help},
     {"360-camera",        &preset_360_camera,        &preset_360_camera_help},
     {"in-the-wild",       &preset_in_the_wild,       &preset_in_the_wild_help},
     {"centered-object",   &preset_centered_object,   &preset_centered_object_help},

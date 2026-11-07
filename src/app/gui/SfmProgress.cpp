@@ -305,6 +305,9 @@ bool read_live_model(const std::string& dir, int64_t& mtime, LiveModel& out, uin
     m.post.n_post = ds.num_cameras;
     m.post.c2w_flip = ds.c2w;
 
+    float up[3] = {0, 0, 1};
+    if (ds.gauge_oriented || snapshot_up(m, up))
+        ds.navigation_up = std::array<float, 3>{up[0], up[1], up[2]};
     out = std::move(m);
     mtime = stamp;
     return true;
@@ -445,10 +448,16 @@ bool snapshot_motion(const LiveModel& from, const LiveModel& to, float S[12]) {
     return true;
 }
 
-bool snapshot_up(const LiveModel& m, float up[3]) {
+bool snapshot_up(const LiveModel& m, float up[3], const std::vector<double>& display_degrees) {
     double u[3] = {0, 0, 0};
-    for (int64_t i = 0; i < m.ds.num_cameras; i++)
-        for (int r = 0; r < 3; r++) u[r] += m.ds.c2w[(size_t)i * 12 + (size_t)r * 4 + 1];
+    for (int64_t i = 0; i < m.ds.num_cameras; i++) {
+        const double angle = ((size_t)i < display_degrees.size() ? display_degrees[i] : 0) *
+                             std::acos(-1.) / 180.;
+        for (int r = 0; r < 3; r++) {
+            const auto k = (size_t)i * 12 + (size_t)r * 4;
+            u[r] += std::sin(angle) * m.ds.c2w[k] + std::cos(angle) * m.ds.c2w[k + 1];
+        }
+    }
     const double n = std::sqrt(u[0]*u[0] + u[1]*u[1] + u[2]*u[2]);
     if (!(n > 1e-9)) return false;
     for (int r = 0; r < 3; r++) up[r] = (float)(u[r] / n);

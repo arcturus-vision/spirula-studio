@@ -331,6 +331,36 @@ SS_MSG(prefilter_sequential_help,
        "--quadratic-overlap); içerik puanının fazla düşük sıraladığı gerçek bir "
        "bağ kaybolmaz"));
 
+SS_MSG(tracking_selection_help,
+    EN("Use recorded Arcturus poses to shortlist pairs, with visual audits and full-search fallback"),
+    JA("記録された Arcturus 姿勢で候補ペアを選び、画像監査と全探索へのフォールバックを行います"),
+    ZH_HANS("使用记录的 Arcturus 位姿筛选像对，并进行视觉检查和完整搜索回退"),
+    ZH_HANT("使用記錄的 Arcturus 姿態篩選影像對，並進行視覺檢查和完整搜尋回退"),
+    KO("기록된 Arcturus 포즈로 쌍 후보를 선택하고 시각 검사 및 전체 검색 대체를 수행합니다"),
+    DE("Aufgezeichnete Arcturus-Posen zur Paarauswahl nutzen, mit Bildprüfung und vollständiger Suche bei Bedarf"),
+    FR("Présélectionner les paires avec les poses Arcturus, avec contrôle visuel et recherche complète en secours"),
+    ES("Preseleccionar pares con poses Arcturus, con comprobación visual y búsqueda completa de respaldo"),
+    PT("Pré-selecionar pares com poses Arcturus, com verificação visual e busca completa alternativa"),
+    IT("Preseleziona coppie con le pose Arcturus, con verifiche visive e ricerca completa di riserva"),
+    NL("Selecteer paren met Arcturus-posities, met visuele controles en volledige zoekactie indien nodig"),
+    RU("Отбор пар по позам Arcturus с визуальной проверкой и резервным полным поиском"),
+    TR("Arcturus pozlarıyla çiftleri seç; görsel denetim ve gerektiğinde tam arama kullan"));
+
+SS_MSG(stereo_selection_help,
+    EN("Share pair selection across the manifest's synchronized stereo groups; retain both eyes for matching and reconstruction"),
+    JA("マニフェストの同期ステレオグループでペア選択を共有し、両眼をマッチングと再構成に使用します"),
+    ZH_HANS("在清单的同步立体组内共享像对选择；保留双目用于匹配和重建"),
+    ZH_HANT("在清單的同步立體群組內共用影像對選擇；保留雙目供比對和重建"),
+    KO("매니페스트의 동기화된 스테레오 그룹에서 쌍 선택을 공유하고 매칭과 재구성에 양쪽 눈을 유지합니다"),
+    DE("Paarauswahl zwischen synchronisierten Stereogruppen des Manifests teilen; beide Augen für Zuordnung und Rekonstruktion behalten"),
+    FR("Partager la sélection entre les groupes stéréo synchronisés du manifeste ; conserver les deux yeux pour l'appariement et la reconstruction"),
+    ES("Compartir la selección entre grupos estéreo sincronizados del manifiesto; conservar ambos ojos para emparejamiento y reconstrucción"),
+    PT("Compartilhar a seleção entre grupos estéreo sincronizados do manifesto; manter os dois olhos para correspondência e reconstrução"),
+    IT("Condividi la selezione tra i gruppi stereo sincronizzati del manifesto; mantieni entrambi gli occhi per abbinamento e ricostruzione"),
+    NL("Deel paarselectie tussen gesynchroniseerde stereogroepen in het manifest; behoud beide ogen voor matching en reconstructie"),
+    RU("Общий отбор пар для синхронных стереогрупп манифеста; оба ракурса сохраняются для сопоставления и реконструкции"),
+    TR("Manifestteki eşzamanlı stereo grupları arasında çift seçimini paylaş; eşleştirme ve yeniden oluşturma için iki gözü de koru"));
+
 SS_MSG(rig_pairs_help,
     EN("On a dual-fisheye rig, match each verified pair's rig-mates too: when "
        "cam0 of two frames matched, cam1 of the same two frames; when cam0 "

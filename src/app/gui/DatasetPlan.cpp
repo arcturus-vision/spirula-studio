@@ -88,10 +88,17 @@ bool input_masks_in_dataset(const PrepJob& job, const PrepInput& in) {
     return same_dir(in.mask_dir, fs::path(job.workspace) / "masks");
 }
 
+bool arcturus_input(const PrepJob& job, const PrepInput& in) {
+    if (!in.is_video) return false;
+    std::error_code ec;
+    return in.arcturus_detected || fs::exists(
+        fs::path(job.workspace) / "images" / in.subdir / ".arcturus-manifest.json", ec);
+}
+
 bool masks_wanted(const PrepJob& job) {
     if (job.mask_enable) return true;
     for (const PrepInput& in : job.inputs)
-        if (!in.mask_dir.empty() || !in.stencil.empty()) return true;
+        if (!in.mask_dir.empty() || !in.stencil.empty() || arcturus_input(job, in)) return true;
     return false;
 }
 
@@ -419,6 +426,7 @@ bool apply_legacy_frames(const std::vector<std::string>& a, const PrepJob& now,
                          PrepJob& j) {
     if (a.empty()) return false;
     j.force_external_decode = a[0] == "ffmpeg";
+    j.arcturus_keyframes = false;
     j.inputs.clear();
     for (size_t k = 1; k + 1 < a.size(); k++) {
         const std::string& flag = a[k];
@@ -487,6 +495,7 @@ void apply_legacy_recon(const std::vector<std::string>& a, const std::string& im
     job.pairs = 0;
     job.overlap = 10;
     job.prefilter_sequential = true;
+    job.tracking_selection = false;
     job.loop_closure = true;
     job.metric_gps = 0;
     job.sensor_gauge = job.exif_attitude = 2;
@@ -512,6 +521,8 @@ void apply_legacy_recon(const std::vector<std::string>& a, const std::string& im
         else if (flag == "--matcher") job.matcher = take() == "bruteforce" ? 0 : 1;
         else if (flag == "--pairs") job.pairs = index_in(kSfmPairs, take(), 0);
         else if (flag == "--overlap") job.overlap = (int)to_float(take());
+        else if (flag == "--tracking-selection") job.tracking_selection = true;
+        else if (flag == "--no-tracking-selection") job.tracking_selection = false;
         else if (flag == "--no-loop-closure") job.loop_closure = false;
         else if (flag == "--no-prefilter-sequential") job.prefilter_sequential = false;
         else if (flag == "--focal") job.init_focal_px = to_float(take());
@@ -695,7 +706,11 @@ StepFields frames_fields(const PrepJob& job) {
     add(f, "decoder", "", job.force_external_decode ? "ffmpeg" : "auto");
     add(f, "frame_indices", "", kStreamingFrameExtraction ? "source" : "candidates");
     add(f, "max_frames", "", num(job.max_frames));
-    if (job.arcturus_keyframes) add(f, "arcturus_keyframes", "", onoff(true));
+    if (job.arcturus_eye) add(f, "arcturus_eye", "", num(job.arcturus_eye));
+    if (job.arcturus_keyframes) {
+        add(f, "arcturus_keyframes", "", onoff(true));
+        add(f, "arcturus_sampling", "", "fps-keyframes-v1");
+    }
     add(f, "auto_rotate", "", onoff(job.auto_rotate));
     if (rate) {
         add(f, "sharp_window", "", num(job.sharp_window));
@@ -719,6 +734,7 @@ StepFields masks_fields(const PrepJob& job) {
     bool segment = false;
     for (const PrepInput& in : job.inputs) {
         const std::string scope = scope_of(in.subdir);
+        if (arcturus_input(job, in)) add(f, "arcturus_fov", scope, num(job.arcturus_mask_degrees) + "-v1");
         if (in.mask_dir.empty()) segment = true;
         else if (!input_masks_in_dataset(job, in))
             add(f, "found_masks", scope, norm_path(in.mask_dir));
@@ -759,6 +775,7 @@ StepFields model_fields(const SfmJob& job) {
     const PrepJob& p = job.prep;
     StepFields f;
     add(f, "engine", "", "builtin");
+    add(f, "arcturus_stereo_selection", "", "shared-v1");
     add(f, "image_dir", "", image_dir_field(p));
     add_lenses(f, p, job.camera_model);
     add(f, "camera_mode", "",
@@ -772,6 +789,7 @@ StepFields model_fields(const SfmJob& job) {
     if (sequential_window_applies(job)) add(f, "overlap", "", num(job.overlap));
     add(f, "loop_closure", "", onoff(job.loop_closure));
     add(f, "prefilter_sequential", "", onoff(job.prefilter_sequential));
+    add(f, "tracking_selection", "", onoff(job.tracking_selection));
     if (job.init_focal_px > 0) add(f, "focal_px", "", num(job.init_focal_px));
     if (!job.init_distortion.empty()) add(f, "distortion", "", job.init_distortion);
     add(f, "distortion_refine", "", num(job.distortion_refine));
@@ -791,6 +809,9 @@ StepFields model_fields(const SfmJob& job) {
     add_sequences(f, p);
     add_sensors(f, p);
     add(f, "masks_for_features", "", onoff(masks_reach_features(p, job.mask_features)));
+    if (job.mask_features)
+        for (const PrepInput& in : p.inputs)
+            if (arcturus_input(p, in)) add(f, "arcturus_fov", scope_of(in.subdir), num(p.arcturus_mask_degrees) + "-v1");
     add(f, "feature_only_masks", "",
         onoff(p.mask_enable && !p.mask_feature_prompt.empty()));
     return f;
@@ -830,6 +851,9 @@ StepFields model_fields(const ColmapJob& job, const PrepJob& p) {
     if (!job.image_gamut.empty()) add(f, "image_gamut", "", job.image_gamut);
     if (job.image_is_linear) add(f, "image_linear", "", onoff(*job.image_is_linear));
     add(f, "masks_for_features", "", onoff(masks_reach_features(p, job.mask_features)));
+    if (job.mask_features)
+        for (const PrepInput& in : p.inputs)
+            if (arcturus_input(p, in)) add(f, "arcturus_fov", scope_of(in.subdir), num(p.arcturus_mask_degrees) + "-v1");
     add(f, "feature_only_masks", "",
         onoff(p.mask_enable && !p.mask_feature_prompt.empty()));
     return f;

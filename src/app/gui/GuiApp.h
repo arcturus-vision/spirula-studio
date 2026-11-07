@@ -207,7 +207,7 @@ public:
 
 private:
     void request_go_home();
-    void apply_preset(const std::string& preset);
+    void apply_preset(const std::string& preset, bool reload_dataset = true);
     // A preset the user saved (or a run's config.json). Replaces the whole
     // config the way a built-in preset does, but keeps the GUI-owned context
     // -- which dataset is open, where its runs go.
@@ -775,6 +775,7 @@ private:
     // preset is in use -- it is what the run's config.json records, and what
     // the options editor's "preset default" tooltips are relative to.
     std::string _preset = "3dgs";
+    bool _train_preset_chosen = false;
     ConfigUIState _cfg_ui;
     // Persisted: the last value the user gave save_full_checkpoint by hand. A
     // preset only overrides it by turning it on.
@@ -785,6 +786,7 @@ private:
     // Saved presets, one picker per kind.
     PresetPicker<TrainPreset> _train_presets;
     PresetPicker<DatasetPreset> _ds_presets;
+    bool _dataset_preset_chosen = false;
     PresetPicker<MeshPreset> _mesh_presets;
     // The save dialog, which the three kinds share -- it asks the same three
     // questions whatever is being saved.
@@ -895,6 +897,7 @@ private:
     // trainer screen uses before training starts.
     ViewportPanel _model_view;
     LiveModel _live_model;
+    std::vector<std::string> _sfm_image_stems;
     bool _model_attached = false;
     // Snapshot files already read, by their write time; 0 means "not yet".
     int64_t _model_mtime = 0, _pairs_mtime = 0, _matches_mtime = 0;

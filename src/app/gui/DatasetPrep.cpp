@@ -2,6 +2,7 @@
 
 #include "app/gui/DatasetPrep.h"
 #include "app/gui/ArcturusImport.h"
+#include "i18n/catalog/Arcturus.h"
 
 #include "app/CubeLut.h"
 #include "app/LidarDataset.h"
@@ -794,6 +795,10 @@ std::vector<std::vector<std::string>> input_sequences(const PrepJob& job,
     };
     std::vector<std::vector<std::string>> out;
     if (!in.sequential) return out;
+    if (in.is_video && in.arcturus_detected && job.arcturus_eye) {
+        out.push_back({join(in.subdir, job.arcturus_eye == 2 ? "cam1" : "cam0")});
+        return out;
+    }
     if (in.subcameras.empty()) {
         out.emplace_back();
         for (const std::string& lens : lens_dirs(job, in))
@@ -1930,6 +1935,25 @@ bool DatasetPrep::run(const PrepJob& job_in, PrepResult& out, std::string& error
     if (!job.inference_devices.empty() && _cancel.load()) {
         error = lmsg::err_cancelled.get();
         return false;
+    }
+    for (size_t i = 0; i < job.inputs.size(); ++i) {
+        if (!job.inputs[i].is_video) continue;
+        if (fs::exists(fs::path(per[i].images) / ".arcturus-manifest.json"))
+            enter(Stage::Masks, lmsg::stage_frame_mask.get());
+        if (apply_arcturus_masks(per[i].images, per[i].masks, _cancel,
+                                 want_masks || job.keep_masks ||
+                                 fs::exists(layer_root / gui::mask::kIndexFileName),
+                                 job.arcturus_mask_degrees)) {
+            out.mask_dir = (ws / "masks").string();
+            out.mask_dir_cfg = "masks";
+            out.mask_dir_flipped = false;
+            std::ofstream marker(ws / "masks" / ".arcturus-fov-mask");
+            marker << job.arcturus_mask_degrees << "\n";
+            marker.close();
+            if (!marker) throw std::runtime_error(spirula::i18n::msg::arcturus::mask_failed.get());
+            log(fmt(spirula::i18n::msg::arcturus::mask_applied,
+                    {job.arcturus_mask_degrees}), false);
+        }
     }
     if (done) done(Stage::Masks, job);
     return true;

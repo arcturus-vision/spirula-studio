@@ -192,20 +192,26 @@ Manifest manifest_read(const std::string& path) {
             m.rigs.push_back(std::move(d));
         }
     }
-    if (const JsonValue* seqs = root.find("sequences")) {
-        if (!seqs->is_array()) bad(path, "sequences: expected a list");
-        for (const JsonValue& e : seqs->arr) {
-            if (!e.is_object()) bad(path, "sequences: each entry is a mapping");
-            SequenceDef d;
-            const JsonValue* mem = e.find("members");
-            if (!mem || !mem->is_array()) bad(path, "sequences: an entry needs a members list");
-            for (const JsonValue& v : mem->arr) {
-                std::string p = str_of(v, path, "members");
-                while (!p.empty() && (p.back() == '/' || p.back() == '\\')) p.pop_back();
-                d.members.push_back(p == "." ? std::string() : p);
+    for (const char* key : {"sequences", "stereo_groups"}) {
+        if (const JsonValue* seqs = root.find(key)) {
+            if (!seqs->is_array()) bad(path, "sequences: expected a list");
+            for (const JsonValue& e : seqs->arr) {
+                if (!e.is_object()) bad(path, "sequences: each entry is a mapping");
+                SequenceDef d;
+                const JsonValue* mem = e.find("members");
+                if (!mem || !mem->is_array()) bad(path, "sequences: an entry needs a members list");
+                for (const JsonValue& v : mem->arr) {
+                    std::string p = str_of(v, path, "members");
+                    while (!p.empty() && (p.back() == '/' || p.back() == '\\')) p.pop_back();
+                    d.members.push_back(p == "." ? std::string() : p);
+                }
+                if (d.members.empty()) bad(path, "sequences: an entry needs at least one member");
+                if (std::string(key) == "stereo_groups") {
+                    if (d.members.size() != 2 || d.members[0] == d.members[1])
+                        bad(path, "stereo_groups: expected two distinct camera prefixes");
+                    m.stereo_groups.push_back(std::move(d));
+                } else m.sequences.push_back(std::move(d));
             }
-            if (d.members.empty()) bad(path, "sequences: an entry needs at least one member");
-            m.sequences.push_back(std::move(d));
         }
     }
     if (const JsonValue* caps = root.find("captures")) {
@@ -339,19 +345,22 @@ std::string manifest_write(const Manifest& m, bool json) {
         }
         root.obj.emplace_back("rigs", std::move(rigs));
     }
-    if (!m.sequences.empty()) {
-        JsonValue seqs;
-        seqs.type = JsonValue::Type::Array;
-        for (const SequenceDef& d : m.sequences) {
-            JsonValue mem;
-            mem.type = JsonValue::Type::Array;
-            for (const std::string& p : d.members) mem.arr.push_back(text(p.empty() ? "." : p));
-            JsonValue e;
-            e.type = JsonValue::Type::Object;
-            e.obj.emplace_back("members", std::move(mem));
-            seqs.arr.push_back(std::move(e));
+    for (const char* key : {"sequences", "stereo_groups"}) {
+        const auto& groups = std::string(key) == "sequences" ? m.sequences : m.stereo_groups;
+        if (!groups.empty()) {
+            JsonValue seqs;
+            seqs.type = JsonValue::Type::Array;
+            for (const SequenceDef& d : groups) {
+                JsonValue mem;
+                mem.type = JsonValue::Type::Array;
+                for (const std::string& p : d.members) mem.arr.push_back(text(p.empty() ? "." : p));
+                JsonValue e;
+                e.type = JsonValue::Type::Object;
+                e.obj.emplace_back("members", std::move(mem));
+                seqs.arr.push_back(std::move(e));
+            }
+            root.obj.emplace_back(key, std::move(seqs));
         }
-        root.obj.emplace_back("sequences", std::move(seqs));
     }
     if (!m.captures.empty()) {
         JsonValue caps;
@@ -445,6 +454,7 @@ std::string manifest_apply(const Manifest& m, SfmConfig& cfg,
     }
     for (const RigDef& r : m.rigs) cfg.rigs.push_back(r);
     for (const SequenceDef& d : m.sequences) cfg.sequences.push_back(d);
+    for (const SequenceDef& d : m.stereo_groups) cfg.stereo_groups.push_back(d);
     return {};
 }
 

@@ -157,13 +157,16 @@ bool append_arcturus_packet(const std::vector<uint8_t> &bytes, ArcturusCapture &
     return true;
 }
 
-bool read_arcturus_capture(const std::string &path, ArcturusCapture &capture) {
+bool read_arcturus_capture(const std::string &path, ArcturusCapture &capture,
+                           const std::function<void()> &checkpoint) {
+    if (checkpoint) checkpoint();
     capture = {};
     bool identified = false;
     std::string error;
     const bool ok = video_metadata_packets(
         path, "gpmd",
         [&](const std::vector<uint8_t> &bytes) {
+            if (checkpoint) checkpoint();
             const bool recognized = append_arcturus_packet(bytes, capture);
             if (identified && !recognized)
                 throw std::runtime_error(amsg::err_missing_arcturus_metadata_envelope.get());
@@ -171,6 +174,7 @@ bool read_arcturus_capture(const std::string &path, ArcturusCapture &capture) {
             return recognized;
         },
         error);
+    if (checkpoint) checkpoint();
     if (!ok && identified)
         throw std::runtime_error(error);
     if (!identified)
@@ -205,7 +209,9 @@ std::vector<ArcturusFrame> select_arcturus_frames(const ArcturusCapture &capture
 std::vector<ArcturusFrame>
 select_arcturus_keyframes(const ArcturusCapture &capture,
                           const std::array<std::vector<double>, 2> &times, int max_count,
-                          double pose_tolerance) {
+                          double pose_tolerance, double fps) {
+    if (!std::isfinite(fps) || fps < 0)
+        throw std::runtime_error(amsg::keyframe_rate.get());
     for (const auto &eye : times)
         for (size_t i = 0; i < eye.size(); ++i)
             if (!std::isfinite(eye[i]) || (i && eye[i] <= eye[i - 1]))
@@ -234,6 +240,13 @@ select_arcturus_keyframes(const ArcturusCapture &capture,
         paired.push_back(*it);
         paired.back().time = time;
     }
+    if (fps > 0) {
+        std::vector<ArcturusFrame> spaced;
+        for (const auto& f : paired)
+            if (spaced.empty() || f.time - spaced.back().time >= 1. / fps - 1e-9)
+                spaced.push_back(f);
+        paired = std::move(spaced);
+    }
     const int count = max_count > 0 ? std::min(max_count, (int)paired.size()) : (int)paired.size();
     if (count < 3)
         throw std::runtime_error(amsg::keyframe_count.get());
@@ -244,16 +257,19 @@ select_arcturus_keyframes(const ArcturusCapture &capture,
     return selected;
 }
 
-Manifest arcturus_manifest(const ArcturusCapture &capture, const std::string &prefix) {
+Manifest arcturus_manifest(const ArcturusCapture &capture, const std::string &prefix, int eye) {
     Manifest m;
     m.camera_mode = "folder";
     for (int i = 0; i < 2; ++i) {
+        if (eye && eye != i + 1) continue;
         ManifestCamera c;
         c.prefix = prefix + (prefix.empty() ? "" : "/") + "cam" + std::to_string(i);
         c.model = capture.cameras[i].model;
         c.params = capture.cameras[i].params;
         m.cameras.push_back(c);
     }
+    if (m.cameras.size() == 2)
+        m.stereo_groups.push_back({{m.cameras[0].prefix, m.cameras[1].prefix}});
     return m;
 }
 } // namespace sfm

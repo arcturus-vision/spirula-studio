@@ -56,6 +56,7 @@
 
 #include "app/gui/GlLoader.h"
 #include "app_generated/app_banner.h"
+#include "app_generated/arcturus_logo.h"
 #include "external/stb_image.h"
 
 #include "core/Env.h"
@@ -235,6 +236,7 @@ GuiApp::GuiApp() {
     _recent_probed_at = 0.0;
     _batch = load_batch_list();
     apply_preset("3dgs");
+    _train_preset_chosen = false;
     // Built-in when it is there, COLMAP when it is not; effective_engine()
     // overrides this anyway if the stored choice is unavailable.
     if (!builtin_sfm_available()) _engine = Engine::Colmap;
@@ -723,6 +725,7 @@ void GuiApp::write_run_settings(std::ofstream& f) {
     line("camera_model", j.camera_model);
     line("camera_mode", std::to_string(j.camera_mode));
     line("pairs", std::to_string(j.pairs));
+    line("tracking_selection", cfg_str(j.tracking_selection));
     line("overlap", std::to_string(j.overlap));
     line("loop_closure", cfg_str(j.loop_closure));
     // line("prefilter_sequential", cfg_str(j.prefilter_sequential));
@@ -745,6 +748,8 @@ void GuiApp::write_run_settings(std::ofstream& f) {
     line("force_external_decode", cfg_str(j.prep.force_external_decode));
     line("video_fps", cfg_str(j.prep.video_fps));
     line("arcturus_keyframes", cfg_str(j.prep.arcturus_keyframes));
+    line("arcturus_mask_degrees", std::to_string(j.prep.arcturus_mask_degrees));
+    line("arcturus_eye", std::to_string(j.prep.arcturus_eye));
     line("adaptive_fps", cfg_str(j.prep.adaptive_fps));
     if (j.prep.adaptive_fps) line("adaptive_range", cfg_str(j.prep.adaptive_range));
     for (const PrepInput& s : _sources)
@@ -861,7 +866,7 @@ bool GuiApp::training_busy() const {
            ph == TrainRunner::Phase::Preparing;
 }
 
-void GuiApp::apply_preset(const std::string& preset) {
+void GuiApp::apply_preset(const std::string& preset, bool reload_dataset) {
     if (native_work_busy() || _batch_active) return;
     TrainConfig fresh;
     train_apply_preset(fresh, preset);
@@ -877,6 +882,7 @@ void GuiApp::apply_preset(const std::string& preset) {
     fresh.disable_viewer = true;
     fresh.save_full_checkpoint = _keep_full_ckpt;
     _preset = preset;
+    _train_preset_chosen = true;
     _train_presets.file.clear();
     _train_presets.display.clear();
     _train_presets.desc.clear();
@@ -884,7 +890,7 @@ void GuiApp::apply_preset(const std::string& preset) {
     _cfg = fresh;
     _defaults = fresh;
     _cfg_ui.touched.clear();
-    if (!_cfg.data.empty()) {
+    if (reload_dataset && !_cfg.data.empty()) {
         detach_session_views();
         _runner.load_dataset(_cfg, _preset);
     }
@@ -895,6 +901,7 @@ void GuiApp::apply_preset(const std::string& preset) {
 // (SS_PRESET_CONTEXT_FIELDS), because a preset is "how", not "where".
 void GuiApp::apply_user_preset(const TrainPreset& p) {
     if (native_work_busy() || _batch_active) return;
+    _train_preset_chosen = true;
     const TrainConfig stock;
     TrainConfig fresh = p.cfg;
     fresh.data = _cfg.data;
@@ -1056,6 +1063,7 @@ void GuiApp::apply_dataset_settings(const DatasetSettings& in) {
 }
 
 void GuiApp::apply_dataset_preset(const DatasetPreset& p) {
+    _dataset_preset_chosen = true;
     apply_dataset_settings(p.s);
     // The rows' Sequential switches are not saved; a capture type of video
     // frames is what stands for them, as a batch row reads it too.
@@ -1075,11 +1083,16 @@ void GuiApp::apply_dataset_builtin(const std::string& name) {
     const std::string use = name.empty() ? std::string("general") : name;
     DatasetSettings s;
     apply_capture_defaults(_sources, s.sfm, s.colmap);
+    if (use == "arcturus-vision") {
+        s.sfm.prep.video_fps = _sfm_job.prep.video_fps;
+        s.colmap.video_fps = _colmap_job.video_fps;
+    }
     if (!dataset_apply_preset(s, use)) return;
     dataset_adapt_preset(use, _sources, s.sfm, s.colmap, _ffmpeg_exe);
     apply_dataset_settings(s);
     _ds_presets.file.clear();
     _ds_presets.builtin = use;
+    _dataset_preset_chosen = true;
     _ds_presets.display.clear();
     _ds_presets.desc.clear();
     _ds_presets.msg.clear();
@@ -1161,6 +1174,18 @@ void GuiApp::open_dataset(std::string dir, std::string image_dir,
                           std::string mask_dir, bool mask_flipped,
                           bool keep_log) {
     if (dir.empty() || native_work_busy()) return;
+    if (dir != _cfg.data && _cfg.resume.empty() && !_train_preset_chosen &&
+        _train_presets.file.empty() && _cfg_ui.touched.empty()) {
+        const fs::path images = fs::path(dir) / (image_dir.empty() ? "images" : image_dir);
+        const fs::path masks = fs::path(dir) / (mask_dir.empty() ? _defaults.mask_dir : mask_dir);
+        std::error_code ec;
+        bool arcturus = fs::exists(fs::path(dir) / "scene.xrSceneTransform.json", ec) ||
+                        fs::exists(masks / ".arcturus-fov-mask", ec);
+        for (const auto& base : {fs::path(dir), images})
+            arcturus = arcturus || (fs::exists(base / ".arcturus-manifest.json", ec) &&
+                                   fs::exists(base / ".arcturus-poses.txt", ec));
+        if (arcturus) apply_preset("arcturus-vision", false);
+    }
     app::set_crash_note("opening dataset " + dir);
     close_native_previews();
     close_mesh_preview();
@@ -1187,14 +1212,6 @@ void GuiApp::open_dataset(std::string dir, std::string image_dir,
         !_cfg_ui.touched.count("seed_pointcloud") && _cfg.seed_pointcloud.empty()) {
         _dense_selected_seed = spirula::dense::kSparseSeed;
         _cfg.seed_pointcloud = _dense_selected_seed;
-    }
-    if (fs::exists(fs::path(dir) / "scene.xrSceneTransform.json")) {
-        _cfg.scene_center = "none";
-        _cfg.relative_scale = 1.0f;
-        _cfg.center_method = "none";
-        _cfg.orientation_method = "none";
-        _cfg.auto_scale_poses = false;
-        _cfg.warp_to_pinhole = false;
     }
     // image_dir / mask_dir: the runner hands its (possibly external) folders
     // over in-memory right after a run -- photos indexed where they are keep
@@ -3664,32 +3681,37 @@ void GuiApp::draw_language_menu() {
 
 namespace {
 
-// The masthead texture, decoded and uploaded on the first home screen. There
-// is one window and the image never changes, so it outlives every caller and
-// the driver frees it with the context.
+unsigned embedded_png_texture(const unsigned char* data, int size, int* w, int* h) {
+    int comp = 0;
+    unsigned char* pixels = stbi_load_from_memory(data, size, w, h, &comp, 4);
+    if (!pixels) return 0;
+    unsigned id = 0;
+    glGenTextures(1, &id);
+    glBindTexture(GL_TEXTURE_2D, id);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, *w, *h, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
+    stbi_image_free(pixels);
+    return id;
+}
+
 unsigned banner_texture(int* w, int* h) {
     static int bw = 0, bh = 0;
-    static const unsigned tex = [] {
-        int comp = 0;
-        unsigned char* px = stbi_load_from_memory(
-            kAppBanner, (int)kAppBannerSize, &bw, &bh, &comp, 4);
-        if (!px) return 0u;
-        unsigned id = 0;
-        glGenTextures(1, &id);
-        glBindTexture(GL_TEXTURE_2D, id);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-        glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, bw, bh, 0, GL_RGBA,
-                     GL_UNSIGNED_BYTE, px);
-        stbi_image_free(px);
-        return id;
-    }();
+    static const unsigned tex = embedded_png_texture(kAppBanner, (int)kAppBannerSize, &bw, &bh);
     *w = bw;
     *h = bh;
     return tex;
+}
+
+void arcturus_logo() {
+    static int w = 0, h = 0;
+    static const unsigned tex = embedded_png_texture(kArcturusLogo, (int)kArcturusLogoSize, &w, &h);
+    if (!tex || w <= 0 || h <= 0) return;
+    const float height = ImGui::GetFrameHeight();
+    ImGui::Image((ImTextureID)(intptr_t)tex, ImVec2(height * w / h, height));
 }
 
 }  // namespace
@@ -4258,6 +4280,9 @@ void GuiApp::sync_dataset_jobs() {
     prep.workspace = _workspace;
     prep.resume = _resume;
     prep.video_fps = _sfm_job.prep.video_fps;
+    prep.arcturus_keyframes = _sfm_job.prep.arcturus_keyframes;
+    prep.arcturus_eye = _sfm_job.prep.arcturus_eye;
+    prep.arcturus_mask_degrees = _sfm_job.prep.arcturus_mask_degrees;
     prep.adaptive_fps = _sfm_job.prep.adaptive_fps;
     prep.adaptive_range = _sfm_job.prep.adaptive_range;
     prep.sharp_window = _sfm_job.prep.sharp_window;
@@ -4291,6 +4316,8 @@ void GuiApp::sync_dataset_jobs() {
     _colmap_job.inference_devices = prep.inference_devices;
     _colmap_job.video_fps = prep.video_fps;
     _colmap_job.arcturus_keyframes = prep.arcturus_keyframes;
+    _colmap_job.arcturus_eye = prep.arcturus_eye;
+    _colmap_job.arcturus_mask_degrees = prep.arcturus_mask_degrees;
     _colmap_job.adaptive_fps = prep.adaptive_fps;
     _colmap_job.adaptive_range = prep.adaptive_range;
     _colmap_job.sharp_window = prep.sharp_window;
@@ -4580,12 +4607,15 @@ void GuiApp::draw_sensor_toggles(PrepInput& s) {
                     : !fs::is_directory(s.path, ec)))
         return;
     const TelemetryInfo t = _telemetry.get(s.path, s.is_video);
+    s.arcturus_detected = t.arcturus;
     if (!t.done) {
         ImGui::SameLine();
         ui::TextDisabled(dmsg::sensors_reading);
         return;
     }
     if (t.arcturus) {
+        ImGui::SameLine();
+        arcturus_logo();
         ImGui::SameLine();
         ui::TextDisabled(spirula::i18n::msg::arcturus::calibrated);
         ui::help_on_hover(spirula::i18n::msg::arcturus::import_help);
@@ -5029,6 +5059,24 @@ void lens_tooltip(const Msg& model_help, const Msg* inherited = nullptr) {
     ImGui::EndTooltip();
 }
 
+bool recorded_lens_combo(const char* id, const TelemetryInfo& telemetry) {
+    if (!telemetry.arcturus || telemetry.arcturus_camera_models.empty()) return false;
+    std::string model;
+    for (const auto& name : telemetry.arcturus_camera_models) {
+        if (!model.empty() && name == telemetry.arcturus_camera_models.front()) continue;
+        if (!model.empty()) model += " / ";
+        model += name == "kb-polar-spline" ? "KBPolarSpline"
+                 : name == "opencv-fisheye" ? "KB4" : name;
+    }
+    const std::string shown = i18n::format(spirula::i18n::msg::arcturus::recorded_lens, {model});
+    ImGui::SetNextItemWidth(std::max(px(220.0f), ImGui::CalcTextSize(shown.c_str()).x + px(48.0f)));
+    ImGui::BeginDisabled();
+    if (ui::BeginComboRaw(id, shown.c_str())) ImGui::EndCombo();
+    ImGui::EndDisabled();
+    ui::help_on_hover_disabled(spirula::i18n::msg::arcturus::import_help);
+    return true;
+}
+
 // ImGui's Combo has nowhere to hang a description on a row, so the popup is
 // built by hand: which physical camera each model is for is the whole of the
 // question. `inherit` adds "(same as above)" and makes -1 a selection.
@@ -5112,19 +5160,8 @@ void GuiApp::draw_dataset_basics() {
         ui::help_on_hover(dmsg::quality_help_colmap);
     }
 
-    // Lens model. The two engines spell the models differently; the labels
-    // are the same either way, which is what the user is choosing between.
-    //
-    // With several inputs the built-in engine gets one lens per input instead
-    // (draw_source_cameras) -- a rig that carries a 360 camera and a phone is
-    // one capture with two lens models in it, and forcing one on both makes
-    // half of it unusable. COLMAP's feature_extractor takes a single model for
-    // the run, so that path keeps one control and says so.
-    // One lens each once there is more than one camera to tell apart: several
-    // inputs, or one input that arrived already split into camera folders.
-    // Only under "one camera per folder", though -- a single shared camera
-    // makes the choice meaningless, and one camera per image makes it a list
-    // nobody wants to read.
+    // Built-in reconstruction supports per-input lenses; external COLMAP
+    // accepts one model for the whole run.
     bool any_subcameras = false;
     for (const PrepInput& s : _sources)
         any_subcameras = any_subcameras || !s.subcameras.empty();
@@ -5133,7 +5170,10 @@ void GuiApp::draw_dataset_basics() {
         builtin && per_folder && (_sources.size() > 1 || any_subcameras);
     if (!per_input_lens) {
         ImGui::SetNextItemWidth(px(220.0f));
-        if (builtin) {
+        const bool recorded = builtin && !_sources.empty() &&
+            recorded_lens_combo(ui::detail::label(dmsg::camera_lens),
+                                _telemetry.get(_sources[0].path, _sources[0].is_video));
+        if (builtin && !recorded) {
             // Kept equal to the first row's by normalize_source_lenses, so
             // this reads the same lens whichever control last wrote it.
             const std::string& model = _sfm_job.camera_model;
@@ -5143,7 +5183,7 @@ void GuiApp::draw_dataset_basics() {
             if (sfm_lens_combo(ui::detail::label(dmsg::camera_lens), &idx))
                 apply_lens_to_sources(_sources, _sfm_job, kSfmCameraModels[idx]);
             lens_tooltip(*sfm_camera_model_helps()[idx]);
-        } else {
+        } else if (!builtin) {
             int idx = 0;
             for (int i = 0; i < kNumColmapCameraModels; i++)
                 if (_colmap_job.camera_model == kColmapCameraModels[i]) idx = i;
@@ -5151,7 +5191,7 @@ void GuiApp::draw_dataset_basics() {
                 _colmap_job.camera_model = kColmapCameraModels[idx];
             lens_tooltip(*colmap_camera_model_helps()[idx]);
         }
-        if (!_sources.empty())
+        if (!recorded && !_sources.empty())
             draw_lens_warning(_sources[0].path, _sources[0].is_video,
                               builtin ? _sfm_job.camera_model
                                       : _colmap_job.camera_model,
@@ -5181,6 +5221,17 @@ void GuiApp::draw_dataset_basics() {
                     {&dmsg::matching_automatic, &dmsg::matching_every_pair,
                     &dmsg::matching_neighbours, &dmsg::matching_gpu_preselect});
         ui::help_on_hover(dmsg::matching_help_builtin);
+        const bool arcturus = std::any_of(_sources.begin(), _sources.end(), [&](const PrepInput& s) {
+            return _telemetry.get(s.path, s.is_video).arcturus;
+        });
+        if (arcturus) {
+            arcturus_logo();
+            ImGui::SameLine();
+            ui::Checkbox(spirula::i18n::msg::arcturus::use_dataset_poses,
+                         &_sfm_job.tracking_selection);
+            ui::help_on_hover(spirula::i18n::msg::arcturus::use_dataset_poses_help);
+        }
+
     } else {
         if (ui::Combo(dmsg::image_matching, &matcher_idx,
                         {&dmsg::matching_exhaustive, &dmsg::matching_sequential,
@@ -5243,8 +5294,36 @@ void GuiApp::draw_dataset_basics() {
         // The rate itself is a column of the input list, beside the video it
         // describes; what is left here is what it means for all of them.
         ImGui::BeginDisabled(dataset_locked(Stage::Frames));
-        ui::Checkbox(spirula::i18n::msg::arcturus::keyframes, &_sfm_job.prep.arcturus_keyframes);
-        ui::help_on_hover(spirula::i18n::msg::arcturus::keyframes_help);
+        bool arcturus = false;
+        for (const auto& source : _sources)
+            if (source.is_video) arcturus = arcturus || _telemetry.get(source.path, true).arcturus;
+        if (arcturus) {
+            const float control_right = ImGui::GetCursorPosX() + px(220.0f);
+            arcturus_logo();
+            ImGui::SameLine();
+            ImGui::SetNextItemWidth(control_right - ImGui::GetCursorPosX());
+            ui::Combo(spirula::i18n::msg::arcturus::reconstruction_eyes,
+                      &_sfm_job.prep.arcturus_eye,
+                      {&spirula::i18n::msg::arcturus::both_eyes,
+                       &spirula::i18n::msg::arcturus::left_eye,
+                       &spirula::i18n::msg::arcturus::right_eye});
+            ui::help_on_hover(spirula::i18n::msg::arcturus::reconstruction_eyes_help);
+            ImGui::BeginDisabled(dataset_locked(Stage::Masks));
+            arcturus_logo();
+            ImGui::SameLine();
+            ImGui::SetNextItemWidth(px(64.0f));
+            if (ui::InputInt(spirula::i18n::msg::arcturus::radial_mask,
+                             &_sfm_job.prep.arcturus_mask_degrees))
+                _sfm_job.prep.arcturus_mask_degrees =
+                    std::clamp(_sfm_job.prep.arcturus_mask_degrees, 1, 360);
+            ui::help_on_hover(spirula::i18n::msg::arcturus::radial_mask_help);
+            ImGui::EndDisabled();
+            arcturus_logo();
+            ImGui::SameLine();
+            ui::Checkbox(spirula::i18n::msg::arcturus::keyframes, &_sfm_job.prep.arcturus_keyframes);
+            ui::help_on_hover(spirula::i18n::msg::arcturus::keyframes_help);
+        }
+        ImGui::BeginDisabled(arcturus);
         ui::Checkbox(dmsg::adaptive_fps, &_sfm_job.prep.adaptive_fps);
         ui::help_on_hover(dmsg::adaptive_fps_help);
         if (_sfm_job.prep.adaptive_fps &&
@@ -5271,6 +5350,7 @@ void GuiApp::draw_dataset_basics() {
             ui::Checkbox(dmsg::sync_lenses, &_sfm_job.prep.sync_tracks);
             ui::help_on_hover(dmsg::sync_lenses_help);
         }
+        ImGui::EndDisabled();
         if (any_pano360(_sources)) draw_pano360_options();
         if (!backends().builtin_video) {
             // What the note says is a build-configuration diagnostic and
@@ -5388,19 +5468,23 @@ void GuiApp::draw_source_cameras() {
         if (ImGui::CalcTextSize(names[i].c_str()).x + px(8.0f) < col)
             ImGui::SameLine(col);
         ImGui::SetNextItemWidth(px(220.0f));
-        std::string& stored = group_model(_sources, g);
-        int idx = stored.empty() ? -1 : 0;
-        for (int m = 0; m < kNumSfmCameraModels; m++)
-            if (stored == kSfmCameraModels[m]) idx = m;
-        if (sfm_lens_combo("##lens", &idx, /*inherit=*/i > 0)) {
-            stored = idx < 0 ? std::string() : kSfmCameraModels[idx];
-            edited = true;
+        const bool recorded =
+            recorded_lens_combo("##lens", _telemetry.get(in.path, in.is_video));
+        if (!recorded) {
+            std::string& stored = group_model(_sources, g);
+            int idx = stored.empty() ? -1 : 0;
+            for (int m = 0; m < kNumSfmCameraModels; m++)
+                if (stored == kSfmCameraModels[m]) idx = m;
+            if (sfm_lens_combo("##lens", &idx, /*inherit=*/i > 0)) {
+                stored = idx < 0 ? std::string() : kSfmCameraModels[idx];
+                edited = true;
+            }
+            int shown = 0;
+            for (int m = 0; m < kNumSfmCameraModels; m++)
+                if (models[i] == kSfmCameraModels[m]) shown = m;
+            lens_tooltip(*helps[(size_t)shown],
+                         idx < 0 ? labels[(size_t)shown] : nullptr);
         }
-        int shown = 0;
-        for (int m = 0; m < kNumSfmCameraModels; m++)
-            if (models[i] == kSfmCameraModels[m]) shown = m;
-        lens_tooltip(*helps[(size_t)shown],
-                     idx < 0 ? labels[(size_t)shown] : nullptr);
         // "This input's lenses" only means something for an input with
         // several: a lone photo folder or a one-lens video has none to rig.
         const bool multi = g.sub >= 0 || !lens_dirs(_sfm_job.prep, in).empty();
@@ -5409,8 +5493,10 @@ void GuiApp::draw_source_cameras() {
         if (_ds_advanced) {
             ImGui::SameLine();
             ImGui::SetNextItemWidth(px(90.0f));
+            ImGui::BeginDisabled(recorded);
             ui::InputFloat(dmsg::focal_x_width, &group_focal(_sources, g), 0, 0,
                            "%.4g");
+            ImGui::EndDisabled();
             ui::help_on_hover(dmsg::focal_x_width_help);
         }
         {
@@ -5432,7 +5518,8 @@ void GuiApp::draw_source_cameras() {
                 rig = ids[(size_t)idx];
             ui::help_on_hover(dmsg::rig_help);
         }
-        draw_lens_warning(dir, in.is_video, models[i], /*builtin=*/true);
+        if (!recorded)
+            draw_lens_warning(dir, in.is_video, models[i], /*builtin=*/true);
         ImGui::PopID();
     }
     draw_rig_kinds(groups, names);
@@ -7067,13 +7154,30 @@ void GuiApp::poll_sfm_progress() {
             _model_view.move_view(moved);
     #endif
         _live_model = std::move(lm);
-    #if 1
-        // The mapper's frame is the seed pair's, upside down as often as not:
-        // navigate about the cameras' up until the model is levelled.
-        float up[3] = {0, 0, 1};
-        if (!_live_model.ds.gauge_oriented) snapshot_up(_live_model, up);
-        _model_view.set_nav_up(up);
-    #endif
+        if (!_live_model.ds.gauge_oriented) {
+            std::vector<double> rotations;
+            for (const auto &source : _sources) {
+                const auto info = _telemetry.get(source.path, source.is_video);
+                if (!info.arcturus || info.arcturus_display_rotations.empty()) continue;
+                if (_sfm_image_stems.size() != _live_model.n_images)
+                    _sfm_image_stems = read_image_stems(_sfm.features_dir(), _sfm.matches_path());
+                rotations.resize((size_t)_live_model.ds.num_cameras);
+                for (size_t i = 0; i < rotations.size(); ++i) {
+                    size_t eye = _sfm_job.prep.arcturus_eye == 2 ? 1 : 0;
+                    if (i < _live_model.ids.size() && _live_model.ids[i] < _sfm_image_stems.size()) {
+                        const auto folder = fs::path(_sfm_image_stems[_live_model.ids[i]]).parent_path().filename();
+                        if (folder == "cam0") eye = 0;
+                        else if (folder == "cam1") eye = 1;
+                    }
+                    if (eye < info.arcturus_display_rotations.size())
+                        rotations[i] = info.arcturus_display_rotations[eye];
+                }
+                break;
+            }
+            float up[3];
+            if (snapshot_up(_live_model, up, rotations))
+                _live_model.ds.navigation_up = std::array<float, 3>{up[0], up[1], up[2]};
+        }
         // The mapper's own output is a wall of per-registration detail, so the
         // default log used to go quiet for the longest step. These are the
         // model in hand, not the bar -- a seed retry starts one over.
@@ -7101,6 +7205,7 @@ void GuiApp::poll_sfm_progress() {
 // precisely so that this screen can go on reading them after it ends, so this
 // -- the screen being done with them -- is where they go.
 void GuiApp::reset_dataset_preview(bool sweep) {
+    _sfm_image_stems.clear();
     close_native_previews();
     _features.stop();
     if (sweep) _sfm.sweep_intermediates();
@@ -7915,6 +8020,8 @@ std::string plan_key_label(const std::string& key) {
         {"data_type", &dmsg::capture_type}, {"features", &dmsg::features},
         {"mapper", &dmsg::mapper_schedule}, {"loop_closure", &dmsg::loop_closure},
         {"prefilter_sequential", &dmsg::prefilter_sequential},
+        {"tracking_selection", &spirula::i18n::msg::arcturus::use_dataset_poses},
+        {"arcturus_eye", &spirula::i18n::msg::arcturus::reconstruction_eyes},
         {"overlap", &dmsg::sequential_overlap}, {"focal_px", &dmsg::initial_focal_px},
         {"distortion_refine", &dmsg::sfm_distortion_refinement},
         {"final_free_rig", &dmsg::sfm_final_free_rig},
@@ -8138,6 +8245,7 @@ void GuiApp::restore_from_record(bool announce) {
         if (!rec.present) return;
     }
     apply_dataset_settings(s);
+    _dataset_preset_chosen = true;
     restore_record_rows(rec);
     // What the picker last applied no longer describes the panel, and a
     // built-in left armed would be put back over it by the next probe.
@@ -8610,6 +8718,15 @@ void GuiApp::draw_dataset_form(float height, bool running) {
     if (!running && _workspace != _restored_ws && _source_probes_ready) {
         _restored_ws = _workspace;
         restore_from_record(/*announce=*/true);
+    }
+    if (!running && _source_probes_ready && !_dataset_preset_chosen) {
+        bool ready = true, arcturus = false;
+        for (const PrepInput& source : _sources) {
+            const TelemetryInfo info = _telemetry.get(source.path, source.is_video);
+            ready = ready && info.done;
+            arcturus = arcturus || info.arcturus;
+        }
+        if (ready && arcturus) apply_dataset_builtin("arcturus-vision");
     }
     if (_keep_built && _keep_built_for != _workspace) _keep_built = false;
 

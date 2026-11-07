@@ -379,6 +379,12 @@ void SplatViewer::run(std::string path) {
                                   0, unit, 0, center[1],
                                   0, 0, unit, center[2],
                                   0, 0, 0, 1};
+        if (!cfg.data.empty()) {
+            const auto model = find_colmap_model(cfg.data, cfg.colmap_recon_dir);
+            ParsedDataset gauge;
+            if (!model.empty()) dsparse::read_gauge(model, gauge);
+            if (gauge.navigation_up) vc.navigation_up = *gauge.navigation_up;
+        }
         vc.base_camera_size = 0.0f;   // no cameras to draw
         vc.scene_slot = _pending_slot;
         {

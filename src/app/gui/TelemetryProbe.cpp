@@ -33,8 +33,12 @@ TelemetryInfo probe(const std::string& path, bool is_video) {
         try {
             sfm::ArcturusCapture capture;
             out.arcturus = sfm::read_arcturus_capture(path, capture);
-            if (out.arcturus)
+            if (out.arcturus) {
+                out.arcturus_display_rotations = sfm::video_display_rotations(path);
+                for (const auto& camera : capture.cameras)
+                    out.arcturus_camera_models.push_back(camera.model);
                 return out;
+            }
         } catch (const std::exception &) {
             return out;
         }
@@ -48,6 +52,18 @@ TelemetryInfo probe(const std::string& path, bool is_video) {
         if (t.carrier != sfm::TelemetryCarrier::None)
             out.carrier = sfm::telemetry_carrier_name(t.carrier);
         return out;
+    }
+    for (const auto& base : {fs::path(path), fs::path(path) / "images"}) {
+        if (!fs::exists(base / ".arcturus-manifest.json") ||
+            !fs::exists(base / ".arcturus-poses.txt")) continue;
+        try {
+            const auto manifest = sfm::manifest_read((base / ".arcturus-manifest.json").string());
+            if (manifest.cameras.empty() || manifest.cameras.size() > 2) continue;
+            for (const auto& camera : manifest.cameras)
+                out.arcturus_camera_models.push_back(camera.model);
+            out.arcturus = true;
+            return out;
+        } catch (const std::exception&) {}
     }
     // Only the formats that can carry an EXIF position are counted, so a PNG
     // folder reads as "no GPS" rather than as a folder of files without one.

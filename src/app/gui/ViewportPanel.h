@@ -375,6 +375,7 @@ private:
     // The parsers rotate every dataset so the mean camera up axis becomes +Z,
     // a guess, and a bad one on a tilted 360 capture. `_align` is that
     // rotation; unchecking `_level_cameras` undoes it and nothing else.
+    std::array<float, 3> _navigation_up{0, 0, 1};
     float _align[9] = {1,0,0, 0,1,0, 0,0,1};
     bool _align_identity = true;
     bool _level_cameras = true;

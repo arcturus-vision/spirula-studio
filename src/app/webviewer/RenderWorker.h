@@ -60,6 +60,7 @@ struct ViewerRenderConfig {
     bool center_cameras = false;
     bool orbit_navigation = true;
     std::vector<dsparse::CameraWireSegment> held_out_cameras;
+    std::array<float, 3> navigation_up{0, 0, 1};
 };
 
 struct ViewerHooks {

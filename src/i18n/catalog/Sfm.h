@@ -2344,6 +2344,21 @@ SS_MSG(match_pairs_scored,
     RU("оценено пар: {0}/{1}"),
     TR("puanlanan çift: {0}/{1}"));
 
+SS_MSG(match_stereo_selection,
+    EN("Stereo selection: images {0}, representatives {1}; both eyes retained"),
+    JA("ステレオ選択：画像 {0}、代表画像 {1}；両眼を保持"),
+    ZH_HANS("立体选择：图像 {0}，代表图像 {1}；保留双目"),
+    ZH_HANT("立體選擇：影像 {0}，代表影像 {1}；保留雙目"),
+    KO("스테레오 선택: 이미지 {0}, 대표 이미지 {1}; 양쪽 눈 유지"),
+    DE("Stereoauswahl: Bilder {0}, Vertreter {1}; beide Augen bleiben erhalten"),
+    FR("Sélection stéréo : images {0}, représentants {1} ; les deux yeux sont conservés"),
+    ES("Selección estéreo: imágenes {0}, representantes {1}; se conservan ambos ojos"),
+    PT("Seleção estéreo: imagens {0}, representantes {1}; os dois olhos são mantidos"),
+    IT("Selezione stereo: immagini {0}, rappresentanti {1}; entrambi gli occhi mantenuti"),
+    NL("Stereoselectie: beelden {0}, vertegenwoordigers {1}; beide ogen behouden"),
+    RU("Стереоотбор: изображений {0}, представителей {1}; оба ракурса сохранены"),
+    TR("Stereo seçimi: görüntü {0}, temsilci {1}; iki göz de korunur"));
+
 SS_MSG(match_prefilter_kept,
     EN("pair selection kept: {0}/{1}; top features: {2}, neighbours: {3} ({4})"),
     JA("ペア選択で残した数: {0}/{1}、上位特徴点: {2}、近傍: {3}（{4}）"),

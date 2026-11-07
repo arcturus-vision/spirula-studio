@@ -103,6 +103,9 @@ struct SfmConfig {
     // window, so a link the content score ranked just out of an image's top-k
     // is still matched when the file order says the two are neighbours.
     bool prefilter_sequential = false;
+    bool stereo_selection = true;
+    bool tracking_selection = false;
+    std::string tracking_pose_signature;
     // Match the rig-mates of every chosen pair of two rig frames, by what the
     // members' known rotations say faces what (sfm/feature/RigPairs.h).
     bool rig_pairs = true;
@@ -215,6 +218,7 @@ struct SfmConfig {
     // same way. Matching takes each one's temporal window; the mapper trusts
     // neighbours first. Empty leaves both exactly as they were.
     std::vector<SequenceDef> sequences;
+    std::vector<SequenceDef> stereo_groups;
     bool merge_ba = true;               // merge: bundle-adjust across the seams
     bool in_place = false;              // merge: write back over the input
 
@@ -348,6 +352,10 @@ struct SfmConfig {
       0, "", quadratic_overlap)                                                                    \
     F(prefilter_sequential, "prefilter-sequential", CMD_AUTO | CMD_MATCH, Tier::Advanced,          \
       "pipeline", 0, 0, "", prefilter_sequential)                                                  \
+    F(stereo_selection, "stereo-selection", CMD_AUTO | CMD_MATCH, Tier::Advanced,                 \
+      "pipeline", 0, 0, "", stereo_selection)                                                        \
+    F(tracking_selection, "tracking-selection", CMD_AUTO, Tier::Advanced,                        \
+      "pipeline", 0, 0, "", tracking_selection)                                                       \
     F(rig_pairs, "rig-pairs", CMD_AUTO | CMD_MATCH, Tier::Advanced, "pipeline", 0, 0, "",          \
       rig_pairs)                                                                                   \
     F(rig_pair_angle, "rig-pair-angle", CMD_AUTO | CMD_MATCH, Tier::Advanced, "pipeline", 0, 180,  \
